@@ -29,7 +29,7 @@ pub enum TcpError {
 }
 
 fn rpc_socket(port: u16) -> String {
-    format!("{DEFAULT_RPC_HOST}:{}", port)
+    format!("{DEFAULT_RPC_HOST}:{port}")
 }
 
 /// Request an unused port from the OS.
@@ -53,7 +53,7 @@ async fn pick_unused_port() -> Result<u16, SandboxError> {
 async fn acquire_unused_port() -> Result<(u16, File), SandboxError> {
     loop {
         let port = pick_unused_port().await?;
-        let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{}.lock", port));
+        let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{port}.lock"));
         let lockfile = File::create(lockpath).map_err(TcpError::LockingError)?;
         if lockfile.try_lock_exclusive().is_ok() {
             break Ok((port, lockfile));
@@ -73,7 +73,7 @@ async fn try_acquire_specific_port(port: u16) -> Result<(u16, File), SandboxErro
         .map_err(TcpError::LocalAddrError)?
         .port();
 
-    let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{}.lock", port));
+    let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{port}.lock"));
     let lockfile = File::create(&lockpath).map_err(TcpError::LockingError)?;
     lockfile
         .try_lock_exclusive()
@@ -282,7 +282,7 @@ impl Sandbox {
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         for _ in 0..timeout_secs * 2 {
             interval.tick().await;
-            let response = reqwest::get(format!("{}/status", rpc)).await;
+            let response = reqwest::get(format!("{rpc}/status")).await;
             if response.is_ok() {
                 return Ok(());
             }
