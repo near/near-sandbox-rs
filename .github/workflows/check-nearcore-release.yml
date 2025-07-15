@@ -54,7 +54,7 @@ jobs:
         if: steps.check-changes.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
           add-paths: |
             src/lib.rs
           commit-message: "Update nearcore version to ${{ steps.latest-version.outputs.latest_version }}"
@@ -70,7 +70,7 @@ jobs:
 
             ## Changes
 
-            - Updated `DEFAULT_NEAR_SANDBOX_VERSION` in `crate/src/lib.rs`
+            - Updated `DEFAULT_NEAR_SANDBOX_VERSION` in `src/lib.rs`
 
             *This PR was automatically created by the Check Nearcore Release workflow.*
           base: main

@@ -68,7 +68,7 @@ const fn platform() -> Option<&'static str> {
 }
 
 fn local_addr(port: u16) -> String {
-    format!("0.0.0.0:{}", port)
+    format!("0.0.0.0:{port}")
 }
 
 // if the `SANDBOX_ARTIFACT_URL` env var is set, we short-circuit and use that.
