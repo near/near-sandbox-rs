@@ -9,8 +9,8 @@ use tokio::process::Child;
 use tracing::info;
 
 use crate::config::{self, SandboxConfig};
-
 use crate::error_kind::{SandboxError, TcpError};
+use crate::runner::{init_with_version, run_with_options_with_version};
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
@@ -229,7 +229,7 @@ impl Sandbox {
             &net_addr,
         ];
 
-        let child = crate::run_with_options_with_version(options, version)?;
+        let child = run_with_options_with_version(options, version)?;
 
         info!(target: "sandbox", "Started up sandbox at localhost:{} with pid={:?}", rpc_port, child.id());
 
@@ -249,7 +249,7 @@ impl Sandbox {
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
         let home_dir = tempfile::tempdir().map_err(SandboxError::FileError)?;
 
-        let output = crate::init_with_version(&home_dir, version)?
+        let output = init_with_version(&home_dir, version)?
             .wait_with_output()
             .await
             .map_err(SandboxError::RuntimeError)?;
