@@ -1896,6 +1896,7 @@ dependencies = [
  "json-patch",
  "near-account-id",
  "near-api",
+ "near-token",
  "rand",
  "reqwest",
  "serde",

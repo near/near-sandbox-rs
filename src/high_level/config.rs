@@ -17,6 +17,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use near_account_id::AccountId;
+use near_token::NearToken;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -24,7 +25,7 @@ pub const DEFAULT_GENESIS_ACCOUNT: &str = "sandbox";
 pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: &str = "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB";
 pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
     "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB";
-pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: u128 = 10_000u128 * 10u128.pow(24);
+pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: NearToken = NearToken::from_near(10_000);
 
 #[derive(thiserror::Error, Debug)]
 pub enum SandboxConfigError {
@@ -93,7 +94,18 @@ pub struct GenesisAccount {
     pub account_id: AccountId,
     pub public_key: String,
     pub private_key: String,
-    pub balance: u128,
+    pub balance: near_token::NearToken,
+}
+
+impl GenesisAccount {
+    pub fn default_with_name(name: AccountId) -> Self {
+        Self {
+            account_id: name,
+            public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
+            private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
+            balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
+        }
+    }
 }
 
 #[cfg(feature = "generate")]
@@ -110,6 +122,39 @@ impl GenesisAccount {
             public_key,
             private_key,
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
+        }
+    }
+
+    pub fn generate_with_name(name: AccountId) -> Self {
+        let (private_key, public_key) = random_key_pair();
+
+        Self {
+            account_id: name,
+            public_key,
+            private_key,
+            balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
+        }
+    }
+
+    pub fn generate_with_name_and_balance(name: AccountId, balance: NearToken) -> Self {
+        let (private_key, public_key) = random_key_pair();
+
+        Self {
+            account_id: name,
+            public_key,
+            private_key,
+            balance,
+        }
+    }
+
+    pub fn generate_with_balance(balance: NearToken) -> Self {
+        let (private_key, public_key) = random_key_pair();
+
+        Self {
+            account_id: random_account_id(),
+            public_key,
+            private_key,
+            balance,
         }
     }
 }
@@ -246,7 +291,7 @@ fn overwrite_genesis(
     accounts_to_add.extend(config.additional_accounts.clone());
 
     for account in &accounts_to_add {
-        total_supply += account.balance;
+        total_supply += account.balance.as_yoctonear();
     }
 
     genesis_obj.insert(
