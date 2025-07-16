@@ -7,9 +7,9 @@
   </p>
 
   <p>
-    <a href="https://crates.io/crates/near-sandbox-utils"><img src="https://img.shields.io/crates/v/near-sandbox-utils.svg?style=flat-square" alt="Crates.io version" /></a>
-    <a href="https://crates.io/crates/near-sandbox-utils"><img src="https://img.shields.io/crates/d/near-sandbox-utils.svg?style=flat-square" alt="Download" /></a>
-    <a href="https://docs.rs/near-sandbox-utils"><img src="https://docs.rs/near-sandbox-utils/badge.svg" alt="Reference Documentation" /></a>
+    <a href="https://crates.io/crates/near-sandbox"><img src="https://img.shields.io/crates/v/near-sandbox.svg?style=flat-square" alt="Crates.io version" /></a>
+    <a href="https://crates.io/crates/near-sandbox"><img src="https://img.shields.io/crates/d/near-sandbox.svg?style=flat-square" alt="Download" /></a>
+    <a href="https://docs.rs/near-sandbox"><img src="https://docs.rs/near-sandbox/badge.svg" alt="Reference Documentation" /></a>
   </p>
 </div>
 
@@ -31,11 +31,11 @@ This library provides a Rust API to easily start and configure your local NEAR S
 
 ## Installation
 
-Add `near-sandbox-utils` to your `[dev-dependencies]`:
+Add `near-sandbox` to your `[dev-dependencies]`:
 
 ```toml
 [dev-dependencies]
-near-sandbox-utils = "..."
+near-sandbox = "..."
 ```
 
 ## Simple Testing Example
@@ -149,7 +149,7 @@ async fn test_custom_rpc_config() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Automatic `near-sandbox` Binary Management
 
-1. When you start a sandbox, the appropriate binary for your platform is automatically downloaded if it is not already present.
+1. When you start a sandbox via `near_sandbox::Sandbox::start_sandbox().await?`, the appropriate binary for your platform is automatically downloaded if it is not already present.
 2. The sandbox process runs in the background.
 3. When the `Sandbox` struct is dropped, the process is automatically killed.
 
@@ -159,7 +159,7 @@ Customize sandbox behavior with these environment variables:
 
 - `SANDBOX_ARTIFACT_URL`: Override the download link for `neard`. Useful if you have trouble downloading from the default IPFS gateway.
 - `NEAR_RPC_TIMEOUT_SECS`: Set the timeout (in seconds) for waiting for the sandbox to start (default: 10).
-- `NEAR_SANDBOX_BIN_PATH`: Use your own pre-built `neard-sandbox` binary instead of the default. Be careful not to use NodeJs package!
+- `NEAR_SANDBOX_BIN_PATH`: Use your own pre-built `near-sandbox` binary instead of the default. Be careful not to use NodeJs package!
 - `NEAR_ENABLE_SANDBOX_LOG`: Set to `1` to enable sandbox logging of `near-sandbox` (helpful for debugging).
 - `NEAR_SANDBOX_LOG`: Specify custom log levels for the sandbox (forwarded to the `RUST_LOG` environment variable).
 - `NEAR_SANDBOX_LOG_STYLE`: Specify custom log style for the sandbox (forwarded to the `RUST_LOG_STYLE` environment variable).
