@@ -1,20 +1,19 @@
-use anyhow::Result;
 use near_api::{NearToken, NetworkConfig, RPCEndpoint};
-use near_sandbox_utils::{GenesisAccount, Sandbox, SandboxConfig};
+use near_sandbox::{GenesisAccount, Sandbox, SandboxConfig};
 use serde_json::json;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = SandboxConfig {
         additional_genesis: Some(json!({
             "epoch_length": 100,
         })),
         additional_accounts: vec![
             GenesisAccount {
-                account_id: "alice.near".to_string(),
+                account_id: "alice.near".parse().unwrap(),
                 public_key: "ed25519:AzBN9XwQDRuLvGvor2JnMitkRxBxn2TLY4yEM3othKUF".to_string(),
                 private_key: "ed25519:5byt6y8h1uuHwkr2ozfN5gt8xGiHujpcT5KyNhZpG62BrnU51sMQk5eTVNwWp7RRiMgKHp7W1jrByxLCr2apXNGB".to_string(),
-                balance: NearToken::from_near(1000).as_yoctonear(),
+                balance: NearToken::from_near(1000),
             },
         ],
         rpc_port: Some(3030),

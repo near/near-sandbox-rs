@@ -1,11 +1,11 @@
 [package]
-name = "near-sandbox-utils"
-version = "0.15.0"
+name = "near-sandbox"
+version = "0.1.0"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/near/sandbox"
 description = """
-Utility library for launching NEAR sandbox environments.
+Library for launching NEAR sandbox environments.
 """
 
 [dependencies]
@@ -22,13 +22,15 @@ serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 reqwest = "0.12.20"
 
+near-account-id = "1"
+near-token = "0.3"
+
 rand = { version = "0.8.4", optional = true }
 chrono = { version = "0.4", optional = true }
 ed25519-dalek = { version = "2.2.0", optional = true }
 bs58 = { version = "0.4.0", optional = true }
 
 [dev-dependencies]
-anyhow = "1"
 tokio = { version = "1", features = ["full"] }
 near-api = "0.6.1"
 

@@ -1,12 +1,11 @@
-use anyhow::Result;
 use near_api::{Account, AccountId, NetworkConfig, RPCEndpoint};
-use near_sandbox_utils::high_level::config::{
+use near_sandbox::high_level::config::{
     DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_BALANCE, DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
 };
-use near_sandbox_utils::Sandbox;
+use near_sandbox::Sandbox;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let sandbox = Sandbox::start_sandbox().await.unwrap();
     let network = NetworkConfig {
         network_name: "sandbox".to_string(),
@@ -14,7 +13,7 @@ async fn main() -> Result<()> {
         ..NetworkConfig::testnet()
     };
 
-    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.parse().unwrap();
+    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.into();
 
     let genesis_account_amount = Account(genesis_account.clone())
         .view()
@@ -35,7 +34,7 @@ async fn main() -> Result<()> {
         .public_key
         .clone();
 
-    assert!(genesis_account_amount == DEFAULT_GENESIS_ACCOUNT_BALANCE);
+    assert!(genesis_account_amount == DEFAULT_GENESIS_ACCOUNT_BALANCE.as_yoctonear());
     assert!(genesis_account_public_key.to_string() == DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY);
 
     Ok(())

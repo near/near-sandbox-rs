@@ -26,6 +26,20 @@ jobs:
       - name: Run clippy
         run: cargo clippy --benches -- -D clippy::all
 
+  examples:
+    needs: [clippy, cargo-fmt, cargo-doc]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+    - name: Install libudev (Linux only)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+    - name: Run examples
+      run: |
+        cd examples
+        ./run_all.sh
+
   cargo-fmt:
     runs-on: ubuntu-24.04
 
