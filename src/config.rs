@@ -22,6 +22,8 @@ use near_token::NearToken;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error_kind::SandboxConfigError;
+
 // Converted from "3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB"
 const GENESIS_SECRET_BYTES: [u8; 64] = [
     144, 154, 142, 244, 43, 148, 195, 201, 42, 166, 212, 81, 232, 14, 76, 168, 88, 70, 227, 251,
@@ -43,18 +45,6 @@ pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: SecretKey =
 pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: PublicKey =
     PublicKey::ED25519(ED25519PublicKey(GENESIS_PUBLIC_BYTES));
 pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: NearToken = NearToken::from_near(10_000);
-
-#[derive(thiserror::Error, Debug)]
-pub enum SandboxConfigError {
-    #[error("Error while performing r/w on config file: {0}")]
-    FileError(std::io::Error),
-
-    #[error("Error while parsing config file: {0}")]
-    JsonParseError(#[from] serde_json::Error),
-
-    #[error("Invalid environment variables: {0}")]
-    EnvParseError(String),
-}
 
 #[cfg(feature = "generate")]
 pub(crate) fn random_account_id() -> AccountId {

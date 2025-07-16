@@ -1,53 +1,24 @@
 use binary_install::Cache;
+use error_kind::SandboxError;
 use fs2::FileExt;
 use tokio::process::{Child, Command};
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-pub mod high_level;
+pub mod config;
+pub mod error_kind;
+pub mod sandbox;
 pub mod sync;
 
 // Re-export important types for better user experience
-pub use high_level::{GenesisAccount, Sandbox, SandboxConfig};
+pub use config::{GenesisAccount, SandboxConfig};
+pub use sandbox::Sandbox;
 
 // The current version of the sandbox node we want to point to.
 // Should be updated to the latest release of nearcore.
 // Currently pointing to nearcore@v2.6.5 released on July 3, 2025
 pub const DEFAULT_NEAR_SANDBOX_VERSION: &str = "2.6.5";
-
-#[derive(thiserror::Error, Debug)]
-pub enum SandboxError {
-    #[error("{0}")]
-    SandboxConfigError(#[from] high_level::SandboxConfigError),
-
-    #[error("{0}")]
-    TcpError(#[from] high_level::TcpError),
-
-    #[error("Error while performing r/w opperations on the file: {0}")]
-    FileError(std::io::Error),
-
-    #[error("Runtime error: {0}")]
-    RuntimeError(std::io::Error),
-
-    #[error("Timeout: Sandbox didn't start within provided timeout")]
-    TimeoutError,
-
-    #[error("Error resolving binary: {0}")]
-    BinaryError(String),
-
-    #[error("Download error: {0}")]
-    DownloadError(String),
-
-    #[error("Install error: {0}")]
-    InstallError(String),
-
-    #[error("Verification error: {0}")]
-    SandboxVerificationError(String),
-
-    #[error("Unsupported platform: {0}")]
-    UnsupportedPlatformError(String),
-}
 
 const fn platform() -> Option<&'static str> {
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::{Child, Command};
 
-use crate::SandboxError;
+use crate::error_kind::SandboxError;
 
 pub fn run_with_options(options: &[&str]) -> Result<Child, SandboxError> {
     let bin_path = crate::ensure_sandbox_bin()?;

@@ -8,25 +8,12 @@ use tokio::net::TcpListener;
 use tokio::process::Child;
 use tracing::info;
 
-pub mod config;
-pub use config::{GenesisAccount, SandboxConfig, SandboxConfigError};
+use crate::config::{self, SandboxConfig};
 
-use crate::SandboxError;
+use crate::error_kind::{SandboxError, TcpError};
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
-
-#[derive(thiserror::Error, Debug)]
-pub enum TcpError {
-    #[error("Error while binding listener to a port {0}: {1}")]
-    BindError(u16, std::io::Error),
-
-    #[error("Error while getting local address: {0}")]
-    LocalAddrError(std::io::Error),
-
-    #[error("Error while locking port file: {0}")]
-    LockingError(std::io::Error),
-}
 
 fn rpc_socket(port: u16) -> String {
     format!("{DEFAULT_RPC_HOST}:{port}")
