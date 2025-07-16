@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1](https://github.com/near/near-sandbox-rs/compare/v0.15.0...v0.15.1) - 2025-07-16
+
+### Added
+
+- post-split changes for `near-sandbox-rs` following separation from `near-sandbox`
+- improvements to sandbox DevX ([#118](https://github.com/near/near-sandbox-rs/pull/118))
+
+### Other
+
+- Update nearcore version to 2.6.5 ([#4](https://github.com/near/near-sandbox-rs/pull/4))
+- Added initial CODEOWNERS ([#2](https://github.com/near/near-sandbox-rs/pull/2))
+- Fixed the test workflow working path, and updated the secrets ([#1](https://github.com/near/near-sandbox-rs/pull/1))
+- add `thiserror`, generation of secret key, and improve docs
+- Add '.github/' from commit '893b62dfeb2b82e1cbc8b0420aaff10875f668f4'
+- Add 'scripts/' from commit '0e05cca1595dbf4f4486a90ded0b38018fef082a'
+- update nearcore version to 2.6.3 ([#125](https://github.com/near/near-sandbox-rs/pull/125))
+
 ## [0.15.0](https://github.com/near/near-sandbox/compare/v0.14.0...v0.15.0) - 2025-05-12
 
 ### Other
