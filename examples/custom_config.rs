@@ -1,6 +1,6 @@
 use anyhow::Result;
 use near_api::{NearToken, NetworkConfig, RPCEndpoint};
-use near_sandbox_utils::{GenesisAccount, Sandbox, SandboxConfig};
+use near_sandbox::{GenesisAccount, Sandbox, SandboxConfig};
 use serde_json::json;
 
 #[tokio::main]

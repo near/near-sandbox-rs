@@ -1,6 +1,6 @@
 use anyhow::Result;
 use near_api::{signer, Account, AccountId, NearToken, NetworkConfig, RPCEndpoint, Signer, Tokens};
-use near_sandbox_utils::{GenesisAccount, Sandbox};
+use near_sandbox::{GenesisAccount, Sandbox};
 use std::sync::Arc;
 
 #[tokio::main]

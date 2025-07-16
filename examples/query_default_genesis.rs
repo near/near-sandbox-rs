@@ -1,9 +1,9 @@
 use anyhow::Result;
 use near_api::{Account, AccountId, NetworkConfig, RPCEndpoint};
-use near_sandbox_utils::high_level::config::{
+use near_sandbox::high_level::config::{
     DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_BALANCE, DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
 };
-use near_sandbox_utils::Sandbox;
+use near_sandbox::Sandbox;
 
 #[tokio::main]
 async fn main() -> Result<()> {
