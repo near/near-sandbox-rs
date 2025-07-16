@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .clone();
 
     assert!(genesis_account_amount == DEFAULT_GENESIS_ACCOUNT_BALANCE.as_yoctonear());
-    assert!(genesis_account_public_key.to_string() == DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY);
+    assert!(genesis_account_public_key == DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY);
 
     Ok(())
 }
