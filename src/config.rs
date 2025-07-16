@@ -51,7 +51,7 @@ pub(crate) fn random_account_id() -> AccountId {
     use rand::Rng;
 
     let mut rng = rand::thread_rng();
-    let random_num = rng.gen_range(0..999999999999999999);
+    let random_num = rng.gen_range(0u128..999999999999999999);
     let account_id = format!(
         "dev-acc-{}-{}.sandbox",
         chrono::Utc::now().format("%H%M%S"),
