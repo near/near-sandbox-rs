@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         ..NetworkConfig::testnet()
     };
 
-    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.parse().unwrap();
+    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.into();
 
     let genesis_account_amount = Account(genesis_account.clone())
         .view()

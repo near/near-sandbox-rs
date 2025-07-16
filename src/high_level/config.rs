@@ -16,12 +16,12 @@ use std::io::{BufReader, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-use near_account_id::AccountId;
+use near_account_id::{AccountId, AccountIdRef};
 use near_token::NearToken;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const DEFAULT_GENESIS_ACCOUNT: &str = "sandbox";
+pub const DEFAULT_GENESIS_ACCOUNT: &AccountIdRef = AccountIdRef::new_or_panic("sandbox");
 pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: &str = "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB";
 pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
     "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB";
@@ -162,9 +162,7 @@ impl GenesisAccount {
 impl Default for GenesisAccount {
     fn default() -> Self {
         GenesisAccount {
-            account_id: DEFAULT_GENESIS_ACCOUNT
-                .parse()
-                .expect("should be valid account id"),
+            account_id: DEFAULT_GENESIS_ACCOUNT.into(),
             public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
             private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
@@ -310,7 +308,7 @@ fn overwrite_genesis(
                 "Account": {
                     "account_id": account.account_id,
                     "account": {
-                    "amount": account.balance.to_string(),
+                    "amount": account.balance,
                     "locked": "0",
                     "code_hash": "11111111111111111111111111111111",
                     "storage_usage": 182

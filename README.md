@@ -41,7 +41,7 @@ near-sandbox-utils = "..."
 ## Simple Testing Example
 
 ```rust
-use near_sandbox_utils::Sandbox;
+use near_sandbox::Sandbox;
 
 #[tokio::test]
 async fn test_basic_sandbox() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,7 +71,7 @@ More examples can be found in the [`examples/`](./examples/) directory.
 ### Starting a Sandbox
 
 ```rust
-use near_sandbox_utils::{Sandbox, SandboxConfig};
+use near_sandbox::{Sandbox, SandboxConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Accessing RPC
 
 ```rust
-use near_sandbox_utils::Sandbox;
+use near_sandbox::Sandbox;
 
 #[tokio::test]
 async fn test_rpc_access() -> Result<(), Box<dyn std::error::Error>> {
@@ -116,7 +116,7 @@ async fn test_rpc_access() -> Result<(), Box<dyn std::error::Error>> {
 ### Configuring RPC
 
 ```rust
-use near_sandbox_utils::{GenesisAccount, Sandbox, SandboxConfig};
+use near_sandbox::{GenesisAccount, Sandbox, SandboxConfig};
 use serde_json::json;
 
 #[tokio::test]
