@@ -16,6 +16,7 @@ use std::io::{BufReader, Write};
 use std::path::Path;
 use std::str::FromStr;
 
+use near_account_id::AccountId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -38,18 +39,18 @@ pub enum SandboxConfigError {
 }
 
 #[cfg(feature = "generate")]
-pub(crate) fn random_account_id() -> String {
+pub(crate) fn random_account_id() -> AccountId {
     use rand::Rng;
 
     let mut rng = rand::thread_rng();
-    let random_num = rng.gen_range(10000000000000usize..99999999999999);
+    let random_num = rng.gen_range(0..999999999999999999);
     let account_id = format!(
-        "sandbox-genesis-dev-acc-{}-{}",
-        chrono::Utc::now().format("%Y%m%d%H%M%S"),
+        "dev-acc-{}-{}.sandbox",
+        chrono::Utc::now().format("%H%M%S"),
         random_num
     );
 
-    account_id
+    account_id.parse().expect("should be valid account id")
 }
 
 /// Generates pseudo-random base58 encoded ed25519 secret and public keys
@@ -89,7 +90,7 @@ pub(crate) fn random_key_pair() -> (String, String) {
 /// Genesis account configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenesisAccount {
-    pub account_id: String,
+    pub account_id: AccountId,
     pub public_key: String,
     pub private_key: String,
     pub balance: u128,
@@ -116,7 +117,9 @@ impl GenesisAccount {
 impl Default for GenesisAccount {
     fn default() -> Self {
         GenesisAccount {
-            account_id: DEFAULT_GENESIS_ACCOUNT.to_string(),
+            account_id: DEFAULT_GENESIS_ACCOUNT
+                .parse()
+                .expect("should be valid account id"),
             public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
             private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,

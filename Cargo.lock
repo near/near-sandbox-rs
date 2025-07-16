@@ -1887,7 +1887,6 @@ dependencies = [
 name = "near-sandbox"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "binary-install",
  "bs58 0.4.0",
  "chrono",
@@ -1895,6 +1894,7 @@ dependencies = [
  "fs2",
  "home",
  "json-patch",
+ "near-account-id",
  "near-api",
  "rand",
  "reqwest",

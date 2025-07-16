@@ -1,4 +1,3 @@
-use anyhow::Result;
 use near_api::{Account, AccountId, NetworkConfig, RPCEndpoint};
 use near_sandbox::high_level::config::{
     DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_BALANCE, DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
@@ -6,7 +5,7 @@ use near_sandbox::high_level::config::{
 use near_sandbox::Sandbox;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let sandbox = Sandbox::start_sandbox().await.unwrap();
     let network = NetworkConfig {
         network_name: "sandbox".to_string(),
