@@ -6,7 +6,7 @@ pub enum SandboxError {
     #[error("{0}")]
     TcpError(#[from] TcpError),
 
-    #[error("Error while performing r/w opperations on the file: {0}")]
+    #[error("Error while performing r/w operations on the file: {0}")]
     FileError(std::io::Error),
 
     #[error("Runtime error: {0}")]
