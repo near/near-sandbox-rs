@@ -7,15 +7,15 @@
   </p>
 
   <p>
-    <a href="https://crates.io/crates/near-sandbox-utils"><img src="https://img.shields.io/crates/v/near-sandbox-utils.svg?style=flat-square" alt="Crates.io version" /></a>
-    <a href="https://crates.io/crates/near-sandbox-utils"><img src="https://img.shields.io/crates/d/near-sandbox-utils.svg?style=flat-square" alt="Download" /></a>
-    <a href="https://docs.rs/near-sandbox-utils"><img src="https://docs.rs/near-sandbox-utils/badge.svg" alt="Reference Documentation" /></a>
+    <a href="https://crates.io/crates/near-sandbox"><img src="https://img.shields.io/crates/v/near-sandbox.svg?style=flat-square" alt="Crates.io version" /></a>
+    <a href="https://crates.io/crates/near-sandbox"><img src="https://img.shields.io/crates/d/near-sandbox.svg?style=flat-square" alt="Download" /></a>
+    <a href="https://docs.rs/near-sandbox"><img src="https://docs.rs/near-sandbox/badge.svg" alt="Reference Documentation" /></a>
   </p>
 </div>
 
 ## Release Notes
 
-Release notes and unreleased changes can be found in the [CHANGELOG](./CHANGELOG.md).
+Release notes can be found in the [CHANGELOG](./CHANGELOG.md).
 
 ## Requirements
 
@@ -24,18 +24,19 @@ Release notes and unreleased changes can be found in the [CHANGELOG](./CHANGELOG
 
 ## What is NEAR Sandbox?
 
-NEAR Sandbox is a [custom build](https://github.com/near/nearcore/blob/9f5e20b29f1a15a00fc50d6051b3b44bb6db60b6/Makefile#L67-L69) of the NEAR blockchain, optimized for local development and testing.  
+[NEAR Sandbox](https://github.com/near/near-sandbox) is a [custom build](https://github.com/near/nearcore/blob/9f5e20b29f1a15a00fc50d6051b3b44bb6db60b6/Makefile#L67-L69) of the NEAR blockchain, optimized for local development and testing.  
 If you're familiar with [Ganache for Ethereum](https://www.trufflesuite.com/ganache), this serves a similar purpose for NEAR.
 
 This library provides a Rust API to easily start and configure your local NEAR Sandbox instance. The sandbox binary is automatically downloaded and managed for you.
 
+There are near-sandbox packages available in other programming languages, see [here](https://github.com/near/near-sandbox).
+
 ## Installation
 
-Add `near-sandbox-utils` to your `[dev-dependencies]`:
+Add `near-sandbox` to your `[dependencies]` or `[dev-dependencies]`:
 
-```toml
-[dev-dependencies]
-near-sandbox-utils = "..."
+```sh
+cargo add near-sandbox
 ```
 
 ## Simple Testing Example
