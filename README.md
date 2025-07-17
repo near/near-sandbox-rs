@@ -167,4 +167,4 @@ Customize sandbox behavior with these environment variables:
 
 ## API Reference
 
-API documentation is available at [docs.rs/near-sandbox-utils](https://docs.rs/near-sandbox-utils).
+API documentation is available at [docs.rs/near-sandbox](https://docs.rs/near-sandbox).
