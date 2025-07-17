@@ -17,33 +17,16 @@ use std::path::Path;
 use std::str::FromStr;
 
 use near_account_id::{AccountId, AccountIdRef};
-use near_crypto::{ED25519PublicKey, ED25519SecretKey, PublicKey, SecretKey};
 use near_token::NearToken;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error_kind::SandboxConfigError;
 
-// Converted from "3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB"
-const GENESIS_SECRET_BYTES: [u8; 64] = [
-    144, 154, 142, 244, 43, 148, 195, 201, 42, 166, 212, 81, 232, 14, 76, 168, 88, 70, 227, 251,
-    71, 215, 160, 130, 34, 227, 223, 157, 7, 68, 84, 186, 62, 16, 3, 217, 88, 51, 205, 129, 209,
-    254, 126, 182, 139, 157, 10, 82, 180, 98, 156, 71, 69, 33, 32, 49, 247, 112, 81, 86, 48, 15,
-    60, 250,
-];
-// Converted from "5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB"
-const GENESIS_PUBLIC_BYTES: [u8; 32] = [
-    62, 16, 3, 217, 88, 51, 205, 129, 209, 254, 126, 182, 139, 157, 10, 82, 180, 98, 156, 71, 69,
-    33, 32, 49, 247, 112, 81, 86, 48, 15, 60, 250,
-];
-
 pub const DEFAULT_GENESIS_ACCOUNT: &AccountIdRef = AccountIdRef::new_or_panic("sandbox");
-/// Corresponds to "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB"
-pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: SecretKey =
-    SecretKey::ED25519(ED25519SecretKey(GENESIS_SECRET_BYTES));
-/// Corresponds to "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB"
-pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: PublicKey =
-    PublicKey::ED25519(ED25519PublicKey(GENESIS_PUBLIC_BYTES));
+pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: &str = "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB";
+pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
+    "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB";
 pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: NearToken = NearToken::from_near(10_000);
 
 #[cfg(feature = "generate")]
@@ -61,12 +44,46 @@ pub(crate) fn random_account_id() -> AccountId {
     account_id.parse().expect("should be valid account id")
 }
 
+/// Generates pseudo-random base58 encoded ed25519 secret and public keys
+///
+/// WARNING: Prefer using `SecretKey` and `PublicKey` from [`near_crypto`](https://crates.io/crates/near-crypto) or [`near_sandbox_utils::GenesisAccount::generate_random()`](near_sandbox_utils::GenesisAccount::generate_random())
+///
+/// ## Generating random key pair for genesis account:
+/// ```rust,no_run
+/// # fn example() {
+/// let (private_key, public_key) = near_sandbox_utils::random_key_pair();
+/// let custom_genesis = near_sandbox_utils::GenesisAccount {
+///     account_id: "alice",
+///     private_key,
+///     public_key,
+///     ..Default::default()
+/// }
+/// # }
+/// ```
+#[cfg(feature = "generate")]
+pub(crate) fn random_key_pair() -> (String, String) {
+    let mut rng = rand::rngs::OsRng;
+    let signing_key: [u8; ed25519_dalek::KEYPAIR_LENGTH] =
+        ed25519_dalek::SigningKey::generate(&mut rng).to_keypair_bytes();
+
+    let secret_key = format!(
+        "ed25519:{}",
+        bs58::encode(&signing_key.to_vec()).into_string()
+    );
+    let public_key = format!(
+        "ed25519:{}",
+        bs58::encode(&signing_key[ed25519_dalek::SECRET_KEY_LENGTH..].to_vec()).into_string()
+    );
+
+    (secret_key, public_key)
+}
+
 /// Genesis account configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenesisAccount {
     pub account_id: AccountId,
-    pub public_key: PublicKey,
-    pub private_key: SecretKey,
+    pub public_key: String,
+    pub private_key: String,
     pub balance: NearToken,
 }
 
@@ -74,8 +91,8 @@ impl GenesisAccount {
     pub fn default_with_name(name: AccountId) -> Self {
         Self {
             account_id: name,
-            public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
-            private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY,
+            public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
+            private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
         }
     }
@@ -88,45 +105,45 @@ impl GenesisAccount {
     /// WARNING: Prefer using `GenesisAccount::default()` or defining `GenesisAccount` from a
     /// scratch
     pub fn generate_random() -> Self {
-        let secret_key = SecretKey::from_random(near_crypto::KeyType::ED25519);
+        let (private_key, public_key) = random_key_pair();
 
         Self {
             account_id: random_account_id(),
-            public_key: secret_key.public_key(),
-            private_key: secret_key,
+            public_key,
+            private_key,
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
         }
     }
 
     pub fn generate_with_name(name: AccountId) -> Self {
-        let secret_key = SecretKey::from_random(near_crypto::KeyType::ED25519);
+        let (private_key, public_key) = random_key_pair();
 
         Self {
             account_id: name,
-            public_key: secret_key.public_key(),
-            private_key: secret_key,
+            public_key,
+            private_key,
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
         }
     }
 
     pub fn generate_with_name_and_balance(name: AccountId, balance: NearToken) -> Self {
-        let secret_key = SecretKey::from_random(near_crypto::KeyType::ED25519);
+        let (private_key, public_key) = random_key_pair();
 
         Self {
             account_id: name,
-            public_key: secret_key.public_key(),
-            private_key: secret_key,
+            public_key,
+            private_key,
             balance,
         }
     }
 
     pub fn generate_with_balance(balance: NearToken) -> Self {
-        let secret_key = SecretKey::from_random(near_crypto::KeyType::ED25519);
+        let (private_key, public_key) = random_key_pair();
 
         Self {
             account_id: random_account_id(),
-            public_key: secret_key.public_key(),
-            private_key: secret_key,
+            public_key,
+            private_key,
             balance,
         }
     }
@@ -136,8 +153,8 @@ impl Default for GenesisAccount {
     fn default() -> Self {
         GenesisAccount {
             account_id: DEFAULT_GENESIS_ACCOUNT.into(),
-            public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
-            private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY,
+            public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
+            private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
             balance: DEFAULT_GENESIS_ACCOUNT_BALANCE,
         }
     }

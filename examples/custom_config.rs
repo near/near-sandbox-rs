@@ -1,7 +1,4 @@
-use std::str::FromStr;
-
 use near_api::{NearToken, NetworkConfig, RPCEndpoint};
-use near_crypto::{PublicKey, SecretKey};
 use near_sandbox::{GenesisAccount, Sandbox, SandboxConfig};
 use serde_json::json;
 
@@ -14,8 +11,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         additional_accounts: vec![
             GenesisAccount {
                 account_id: "alice.near".parse().unwrap(),
-                public_key: PublicKey::from_str("ed25519:AzBN9XwQDRuLvGvor2JnMitkRxBxn2TLY4yEM3othKUF").expect("valid public_key"),
-                private_key: SecretKey::from_str("ed25519:5byt6y8h1uuHwkr2ozfN5gt8xGiHujpcT5KyNhZpG62BrnU51sMQk5eTVNwWp7RRiMgKHp7W1jrByxLCr2apXNGB").expect("valid private_key"),
+                public_key:"ed25519:AzBN9XwQDRuLvGvor2JnMitkRxBxn2TLY4yEM3othKUF".to_string(),
+                private_key: "ed25519:5byt6y8h1uuHwkr2ozfN5gt8xGiHujpcT5KyNhZpG62BrnU51sMQk5eTVNwWp7RRiMgKHp7W1jrByxLCr2apXNGB".to_string(),
                 balance: NearToken::from_near(1000),
             },
         ],
