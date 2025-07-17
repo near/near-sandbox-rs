@@ -99,7 +99,7 @@ impl Sandbox {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Launch with default config and version
@@ -125,7 +125,7 @@ impl Sandbox {
     /// # Exmaple:
     ///
     /// ```rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Launch with default config
@@ -147,7 +147,8 @@ impl Sandbox {
     /// # Example
     ///
     /// ``` rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
     /// use serde_json::json;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -159,7 +160,7 @@ impl Sandbox {
     ///         account_id: "bob.near".parse().unwrap(),
     ///         public_key: "ed25519:...".to_string(),
     ///         private_key: "ed25519:...".to_string(),
-    ///         balance: 10_000u128 * 10u128.pow(24), // 10000 NEAR
+    ///         balance: NearToken::from_near(10_000),
     ///     },
     /// ];
     ///
@@ -182,7 +183,8 @@ impl Sandbox {
     /// # Example
     ///
     /// ``` rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
     /// use serde_json::json;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -194,7 +196,7 @@ impl Sandbox {
     ///         account_id: "bob.near".parse().unwrap(),
     ///         public_key: "ed25519:...".to_string(),
     ///         private_key: "ed25519:...".to_string(),
-    ///         balance: 10_000u128 * 10u128.pow(24), // 10000 NEAR
+    ///         balance: NearToken::from_near(10_000),
     ///     },
     /// ];
     ///
