@@ -26,7 +26,7 @@ near-account-id = "1"
 near-token = "0.3"
 
 rand = { version = "0.8.4", optional = true }
-chrono = { version = "0.4", optional = true }
+chrono = { version = "0.4", default-features = false, optional = true }
 ed25519-dalek = { version = "2.2.0", default-features = false, features = [
     "rand_core",
 ], optional = true }
@@ -37,5 +37,5 @@ tokio = { version = "1", features = ["full"] }
 near-api = "0.6.1"
 
 [features]
-generate = ["rand", "chrono", "ed25519-dalek/rand_core", "bs58"]
+generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = []

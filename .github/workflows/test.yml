@@ -24,7 +24,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
       - name: Run clippy
-        run: cargo clippy --benches -- -D clippy::all
+        run: cargo clippy --all-targets --all-features -- -D clippy::all
 
   examples:
     needs: [clippy, cargo-fmt, cargo-doc]
