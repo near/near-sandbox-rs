@@ -1,5 +1,5 @@
 use near_api::{Account, AccountId, NetworkConfig, RPCEndpoint};
-use near_sandbox::high_level::config::{
+use near_sandbox::config::{
     DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_BALANCE, DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
 };
 use near_sandbox::Sandbox;

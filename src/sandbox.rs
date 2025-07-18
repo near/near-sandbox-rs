@@ -8,25 +8,12 @@ use tokio::net::TcpListener;
 use tokio::process::Child;
 use tracing::info;
 
-pub mod config;
-pub use config::{GenesisAccount, SandboxConfig, SandboxConfigError};
-
-use crate::SandboxError;
+use crate::config::{self, SandboxConfig};
+use crate::error_kind::{SandboxError, TcpError};
+use crate::runner::{init_with_version, run_with_options_with_version};
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
-
-#[derive(thiserror::Error, Debug)]
-pub enum TcpError {
-    #[error("Error while binding listener to a port {0}: {1}")]
-    BindError(u16, std::io::Error),
-
-    #[error("Error while getting local address: {0}")]
-    LocalAddrError(std::io::Error),
-
-    #[error("Error while locking port file: {0}")]
-    LockingError(std::io::Error),
-}
 
 fn rpc_socket(port: u16) -> String {
     format!("{DEFAULT_RPC_HOST}:{port}")
@@ -112,7 +99,7 @@ impl Sandbox {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Launch with default config and version
@@ -138,7 +125,7 @@ impl Sandbox {
     /// # Exmaple:
     ///
     /// ```rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Launch with default config
@@ -160,7 +147,8 @@ impl Sandbox {
     /// # Example
     ///
     /// ``` rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
     /// use serde_json::json;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -172,7 +160,7 @@ impl Sandbox {
     ///         account_id: "bob.near".parse().unwrap(),
     ///         public_key: "ed25519:...".to_string(),
     ///         private_key: "ed25519:...".to_string(),
-    ///         balance: 10_000u128 * 10u128.pow(24), // 10000 NEAR
+    ///         balance: NearToken::from_near(10_000),
     ///     },
     /// ];
     ///
@@ -195,7 +183,8 @@ impl Sandbox {
     /// # Example
     ///
     /// ``` rust,no_run
-    /// use near_sandbox_utils::*;
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
     /// use serde_json::json;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -207,7 +196,7 @@ impl Sandbox {
     ///         account_id: "bob.near".parse().unwrap(),
     ///         public_key: "ed25519:...".to_string(),
     ///         private_key: "ed25519:...".to_string(),
-    ///         balance: 10_000u128 * 10u128.pow(24), // 10000 NEAR
+    ///         balance: NearToken::from_near(10_000),
     ///     },
     /// ];
     ///
@@ -242,7 +231,7 @@ impl Sandbox {
             &net_addr,
         ];
 
-        let child = crate::run_with_options_with_version(options, version)?;
+        let child = run_with_options_with_version(options, version)?;
 
         info!(target: "sandbox", "Started up sandbox at localhost:{} with pid={:?}", rpc_port, child.id());
 
@@ -262,7 +251,7 @@ impl Sandbox {
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
         let home_dir = tempfile::tempdir().map_err(SandboxError::FileError)?;
 
-        let output = crate::init_with_version(&home_dir, version)?
+        let output = init_with_version(&home_dir, version)?
             .wait_with_output()
             .await
             .map_err(SandboxError::RuntimeError)?;
