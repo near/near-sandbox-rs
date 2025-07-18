@@ -21,30 +21,20 @@ use near_token::NearToken;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error_kind::SandboxConfigError;
+
 pub const DEFAULT_GENESIS_ACCOUNT: &AccountIdRef = AccountIdRef::new_or_panic("sandbox");
 pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: &str = "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB";
 pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
     "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB";
 pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: NearToken = NearToken::from_near(10_000);
 
-#[derive(thiserror::Error, Debug)]
-pub enum SandboxConfigError {
-    #[error("Error while performing r/w on config file: {0}")]
-    FileError(std::io::Error),
-
-    #[error("Error while parsing config file: {0}")]
-    JsonParseError(#[from] serde_json::Error),
-
-    #[error("Invalid environment variables: {0}")]
-    EnvParseError(String),
-}
-
 #[cfg(feature = "generate")]
 pub(crate) fn random_account_id() -> AccountId {
     use rand::Rng;
 
     let mut rng = rand::thread_rng();
-    let random_num = rng.gen_range(1..u32::MAX);
+    let random_num = rng.gen_range(u32::MIN..u32::MAX);
     let account_id = format!(
         "dev-acc-{}-{}.sandbox",
         chrono::Utc::now().format("%H%M%S"),
@@ -94,7 +84,7 @@ pub struct GenesisAccount {
     pub account_id: AccountId,
     pub public_key: String,
     pub private_key: String,
-    pub balance: near_token::NearToken,
+    pub balance: NearToken,
 }
 
 impl GenesisAccount {
