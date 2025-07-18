@@ -24,7 +24,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
       - name: Run clippy
-        run: cargo clippy --benches -- -D clippy::all
+        run: cargo clippy --all-targets --all-features -- -D clippy::all
 
   examples:
     needs: [clippy, cargo-fmt, cargo-doc]
@@ -47,6 +47,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run cargo fmt
         run: cargo fmt --check
+
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo build
+        run: cargo build --all-features
 
   # there're sometimes warnings, which signal, that the generated doc
   # won't look as expected, when rendered, and sometimes errors, which will prevent doc from being
