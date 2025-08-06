@@ -177,7 +177,9 @@ fn ensure_sandbox_bin_with_version(version: &str) -> Result<PathBuf, SandboxErro
     let mut bin_path = bin_path(version)?;
     if let Some(lockfile) = installable(&bin_path)? {
         bin_path = install_with_version(version)?;
-        std::env::set_var("NEAR_SANDBOX_BIN_PATH", bin_path.as_os_str());
+        unsafe {
+            std::env::set_var("NEAR_SANDBOX_BIN_PATH", bin_path.as_os_str());
+        }
         fs2::FileExt::unlock(&lockfile).map_err(SandboxError::FileError)?;
     }
 
