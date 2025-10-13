@@ -209,6 +209,9 @@ mod tests {
             .unwrap()
             .data;
 
-        println!("{:?}", stats);
+        assert_eq!(stats["name"], "akorchyn");
+        assert_eq!(stats["id"], 0);
+
+        println!("{:#?}", stats);
     }
 }

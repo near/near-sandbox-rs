@@ -1,4 +1,4 @@
-use near_api::{NearToken, NetworkConfig, RPCEndpoint};
+use near_api::{NearToken, NetworkConfig};
 use near_sandbox::{GenesisAccount, Sandbox, SandboxConfig};
 use serde_json::json;
 
@@ -21,11 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
 
     let sandbox = Sandbox::start_sandbox_with_config(config).await?;
-    let network_config = NetworkConfig {
-        network_name: "sandbox".to_string(),
-        rpc_endpoints: vec![RPCEndpoint::new(sandbox.rpc_addr.parse().unwrap())],
-        ..NetworkConfig::testnet()
-    };
+    let network_config = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
 
     println!("Sandbox is running at: {}", sandbox.rpc_addr);
     println!("Sandbox home directory is: {:?}", sandbox.home_dir);
