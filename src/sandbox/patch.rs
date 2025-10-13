@@ -13,7 +13,7 @@ pub struct PatchState<'a> {
 }
 
 impl<'a> PatchState<'a> {
-    pub fn new(destination_account: AccountId, sandbox: &'a Sandbox) -> Self {
+    pub const fn new(destination_account: AccountId, sandbox: &'a Sandbox) -> Self {
         Self {
             state: vec![],
             destination_account,

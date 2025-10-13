@@ -307,7 +307,7 @@ impl Sandbox {
         Ok(())
     }
 
-    pub fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
+    pub const fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
         PatchState::new(account_id, self)
     }
 }

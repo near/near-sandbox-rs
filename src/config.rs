@@ -151,7 +151,7 @@ impl GenesisAccount {
 
 impl Default for GenesisAccount {
     fn default() -> Self {
-        GenesisAccount {
+        Self {
             account_id: DEFAULT_GENESIS_ACCOUNT.into(),
             public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
             private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
