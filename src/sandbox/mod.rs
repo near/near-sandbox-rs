@@ -3,14 +3,18 @@ use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
 
 use fs2::FileExt;
+use near_account_id::AccountId;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
 use tracing::info;
 
 use crate::config::{self, SandboxConfig};
-use crate::error_kind::{SandboxError, TcpError};
+use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
 use crate::runner::{init_with_version, run_with_options_with_version};
+use crate::sandbox::patch::PatchState;
+
+pub mod patch;
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
@@ -277,6 +281,34 @@ impl Sandbox {
             }
         }
         Err(SandboxError::TimeoutError)
+    }
+
+    pub async fn fast_forward(&self, blocks: u64) -> Result<(), SandboxRpcError> {
+        let client = reqwest::Client::new();
+        let result = client
+            .post(self.rpc_addr.clone())
+            .json(&serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "sandbox_fast_forward",
+                "params": {
+                    "delta_height": blocks,
+                },
+            }))
+            .send()
+            .await?;
+
+        let body = result.json::<serde_json::Value>().await?;
+
+        if body["error"].is_object() {
+            return Err(SandboxRpcError::SandboxRpcError(body["error"].to_string()));
+        }
+
+        Ok(())
+    }
+
+    pub fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
+        PatchState::new(account_id, self)
     }
 }
 

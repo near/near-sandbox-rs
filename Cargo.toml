@@ -41,3 +41,6 @@ near-api = "0.6.1"
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = []
+
+[patch.crates-io]
+near-api = { git = "https://github.com/near/near-api-rs", branch = "sandbox-improvements" }

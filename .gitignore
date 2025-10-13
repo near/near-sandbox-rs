@@ -3,3 +3,5 @@ target/
 
 ## File System
 .DS_Store
+
+Cargo.lock
