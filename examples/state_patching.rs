@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Step 2: Patch the state
     sandbox
         .patch_state(account_id.clone())
-        .account(account_data)
+        .account(account_data.clone())
         .code(code.code_base64)
         .states(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
         .send()
@@ -39,14 +39,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .unwrap();
 
     // Step 3: Query the state
-    let account_data = near_api::Account(account_id.clone())
+    let sandbox_account_data = near_api::Account(account_id.clone())
         .view()
         .fetch_from(&sandbox_network)
         .await
         .unwrap()
         .data;
 
-    assert_eq!(account_data, account_data);
+    assert_eq!(account_data, sandbox_account_data);
 
     Ok(())
 }

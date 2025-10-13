@@ -181,21 +181,21 @@ mod tests {
 
         sandbox
             .patch_state(account_id.clone())
-            .account(account_data)
+            .account(account_data.clone())
             .code(code.code_base64)
             .states(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
             .send()
             .await
             .unwrap();
 
-        let account_data = Account(account_id.clone())
+        let sandbox_account_data = Account(account_id.clone())
             .view()
             .fetch_from(&sandbox_network)
             .await
             .unwrap()
             .data;
 
-        assert_eq!(account_data, account_data);
+        assert_eq!(account_data, sandbox_account_data);
 
         let stats: serde_json::Value = Contract(account_id)
             .call_function(
