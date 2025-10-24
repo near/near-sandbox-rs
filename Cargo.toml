@@ -13,7 +13,7 @@ anyhow = "1"
 tokio = { version = "1", features = ["process"] }
 binary-install = "0.2.0"
 fs2 = "0.4"
-home = "0.5.5"
+home = "<=0.5.11"
 
 [features]
 global_install = []
