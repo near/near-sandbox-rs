@@ -1,5 +1,5 @@
 use binary_install::Cache;
-use fs2::FileExt;
+use fs4::FileExt;
 use tokio::process::{Child, Command};
 
 use std::fs::File;
@@ -139,11 +139,10 @@ fn normalize_name(input: &str) -> String {
 
 // Returns a path to the binary in the form of: `{home}/.near/near-sandbox-{version}` || `{$OUT_DIR}/.near/near-sandbox-{version}`
 fn download_path(version: &str) -> PathBuf {
-    let mut out = if cfg!(feature = "global_install") {
-        home::home_dir().expect("could not retrieve home_dir")
-    } else {
-        PathBuf::from(env!("OUT_DIR"))
-    };
+    #[cfg(feature = "global_install")]
+    let mut out = dirs_next::home_dir().expect("could not retrieve home_dir");
+    #[cfg(not(feature = "global_install"))]
+    let mut out = PathBuf::from(env!("OUT_DIR"));
 
     out.push(".near");
     out.push(format!("near-sandbox-{}", normalize_name(version)));
@@ -180,7 +179,7 @@ fn ensure_sandbox_bin_with_version(version: &str) -> Result<PathBuf, SandboxErro
         unsafe {
             std::env::set_var("NEAR_SANDBOX_BIN_PATH", bin_path.as_os_str());
         }
-        fs2::FileExt::unlock(&lockfile).map_err(SandboxError::FileError)?;
+        FileExt::unlock(&lockfile).map_err(SandboxError::FileError)?;
     }
 
     Ok(bin_path)

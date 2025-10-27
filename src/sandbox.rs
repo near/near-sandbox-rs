@@ -2,7 +2,7 @@ use std::net::SocketAddrV4;
 use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
 
-use fs2::FileExt;
+use fs4::FileExt;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
