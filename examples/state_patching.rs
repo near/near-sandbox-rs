@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .patch_state(account_id.clone())
         .account(account_data.clone())
         .code(code.code_base64)
-        .states(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
+        .storage_entries(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
         .send()
         .await
         .unwrap();

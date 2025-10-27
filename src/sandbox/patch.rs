@@ -30,7 +30,7 @@ impl<'a> PatchState<'a> {
         self
     }
 
-    pub fn state(mut self, state_key_base64: String, state_value_base64: String) -> Self {
+    pub fn storage(mut self, state_key_base64: String, state_value_base64: String) -> Self {
         self.state.push(StateRecord::Data {
             account_id: self.destination_account.clone(),
             data_key_base64: state_key_base64,
@@ -40,10 +40,10 @@ impl<'a> PatchState<'a> {
         self
     }
 
-    pub fn states<I: IntoIterator<Item = (String, String)>>(mut self, states: I) -> Self {
+    pub fn storage_entries<I: IntoIterator<Item = (String, String)>>(mut self, entries: I) -> Self {
         let account_id = self.destination_account.clone();
         self.state.extend(
-            states
+            entries
                 .into_iter()
                 .map(|(state_key_base64, state_value_base64)| StateRecord::Data {
                     account_id: account_id.clone(),
@@ -183,7 +183,7 @@ mod tests {
             .patch_state(account_id.clone())
             .account(account_data.clone())
             .code(code.code_base64)
-            .states(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
+            .storage_entries(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
             .send()
             .await
             .unwrap();
