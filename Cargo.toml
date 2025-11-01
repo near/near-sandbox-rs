@@ -11,9 +11,9 @@ Utility library for launching NEAR sandbox environments.
 [dependencies]
 anyhow = "1"
 tokio = { version = "1", features = ["process"] }
-binary-install = "0.2.0"
-fs2 = "0.4"
-home = "0.5.5"
+binary-install = "0.4"
+fs4 = "0.6"
+dirs-next = { version = "2", optional = true }
 
 [features]
-global_install = []
+global_install = ["dep:dirs-next"]
