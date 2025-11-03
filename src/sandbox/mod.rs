@@ -331,11 +331,10 @@ impl Drop for Sandbox {
 /// will be forward into RUST_LOG environment variable as to not conflict
 /// with similar named log targets.
 fn suppress_sandbox_logs_if_required() {
-    if let Ok(val) = std::env::var("NEAR_ENABLE_SANDBOX_LOG") {
-        if val != "0" {
+    if let Ok(val) = std::env::var("NEAR_ENABLE_SANDBOX_LOG")
+        && val != "0" {
             return;
         }
-    }
 
     // non-exhaustive list of targets to suppress, since choosing a default LogLevel
     // does nothing in this case, since nearcore seems to be overriding it somehow:
@@ -369,6 +368,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(new_height >= height + 1000, "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})");
+        assert!(
+            new_height >= height + 1000,
+            "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})"
+        );
     }
 }

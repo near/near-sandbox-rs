@@ -1,4 +1,4 @@
-use near_api::{signer, Account, AccountId, NearToken, NetworkConfig, Signer, Tokens};
+use near_api::{Account, AccountId, NearToken, NetworkConfig, Signer, Tokens, signer};
 use near_sandbox::{GenesisAccount, Sandbox};
 use std::sync::Arc;
 

@@ -18,7 +18,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .await
         .unwrap();
 
-    assert!(new_height >= height + 1000, "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})");
+    assert!(
+        new_height >= height + 1000,
+        "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})"
+    );
 
     Ok(())
 }

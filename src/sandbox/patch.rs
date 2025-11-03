@@ -1,7 +1,7 @@
 use near_account_id::AccountId;
 use serde::Serialize;
 
-use crate::{error_kind::SandboxRpcError, Sandbox};
+use crate::{Sandbox, error_kind::SandboxRpcError};
 
 #[derive(Clone)]
 pub struct PatchState<'a> {
