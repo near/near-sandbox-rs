@@ -1,0 +1,88 @@
+name: Rust
+
+permissions:
+  pull-requests: write
+  contents: write
+
+on:
+  push:
+    branches: [near-sandbox-utils-0.15.x]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  RUST_BACKTRACE: short
+
+jobs:
+  clippy:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install libudev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D clippy::all
+
+  examples:
+    needs: [clippy, cargo-fmt, cargo-doc]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+    - name: Install libudev (Linux only)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+    - name: Run examples
+      run: |
+        cd examples
+        ./run_all.sh
+
+  cargo-fmt:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo fmt
+        run: cargo fmt --check
+
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo build
+        run: cargo build --all-features
+
+  # there're sometimes warnings, which signal, that the generated doc
+  # won't look as expected, when rendered, and sometimes errors, which will prevent doc from being
+  # generated at release time altogether.
+  cargo-doc:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: run cargo doc
+        run: RUSTDOCFLAGS="-D warnings" cargo doc
+
+  release-plz:
+    runs-on: ubuntu-24.04
+    needs: [clippy, cargo-fmt, cargo-doc]
+    if: github.ref == 'refs/heads/near-sandbox-utils-0.15.x'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install libudev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+      - name: Run release-plz
+        uses: MarcoIeni/release-plz-action@v0.5
+        env:
+          # https://release-plz.ieni.dev/docs/github/trigger
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
