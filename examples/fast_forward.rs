@@ -20,7 +20,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     assert!(
         new_height >= height + 1000,
-        "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})"
+        "expected new height({}) to be at least 1000 blocks higher than the original height({})",
+        new_height,
+        height
     );
 
     Ok(())

@@ -265,12 +265,10 @@ impl Sandbox {
     }
 
     async fn wait_until_ready(rpc: &str) -> Result<(), SandboxError> {
-        let timeout_secs = match std::env::var("NEAR_RPC_TIMEOUT_SECS") {
-            Ok(secs) => secs
-                .parse::<u64>()
-                .expect("Failed to parse NEAR_RPC_TIMEOUT_SECS"),
-            Err(_) => 10,
-        };
+        let timeout_secs = std::env::var("NEAR_RPC_TIMEOUT_SECS").map_or(10, |secs| {
+            secs.parse::<u64>()
+                .expect("Failed to parse NEAR_RPC_TIMEOUT_SECS")
+        });
 
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         for _ in 0..timeout_secs * 2 {
@@ -371,7 +369,9 @@ mod tests {
 
         assert!(
             new_height >= height + 1000,
-            "expected new height({new_height}) to be at least 1000 blocks higher than the original height({height})"
+            "expected new height({}) to be at least 1000 blocks higher than the original height({})",
+            new_height,
+            height
         );
     }
 }
