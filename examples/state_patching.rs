@@ -17,16 +17,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     sandbox
         .patch_state(account_id.clone())
-        .fetch_account(rpc)
+        .fetch_from(
+            rpc,
+            near_sandbox::FetchData::NONE.account().code().storage(),
+        )
+        // Or you can do like that:
+        // .fetch_from(rpc, near_sandbox::FetchData::ALL)
         .await
         .unwrap()
         .with_default_access_key()
-        .fetch_code(rpc)
-        .await
-        .unwrap()
-        .fetch_storage(rpc)
-        .await
-        .unwrap()
+        .initial_balance(NearToken::from_near(666))
         .send()
         .await
         .unwrap();

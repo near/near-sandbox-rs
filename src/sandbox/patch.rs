@@ -1,7 +1,49 @@
 use near_account_id::AccountId;
+use near_token::NearToken;
 use serde::Serialize;
 
 use crate::{config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY, error_kind::SandboxRpcError, Sandbox};
+
+/// Builder for specifying what data to fetch from an RPC endpoint
+#[derive(Clone, Copy, Default)]
+pub struct FetchData {
+    fetch_account: bool,
+    fetch_storage: bool,
+    fetch_code: bool,
+}
+
+impl FetchData {
+    pub const NONE: FetchData = FetchData::new();
+
+    pub const ALL: FetchData = FetchData {
+        fetch_account: true,
+        fetch_storage: true,
+        fetch_code: true,
+    };
+
+    pub const fn new() -> Self {
+        Self {
+            fetch_account: false,
+            fetch_storage: false,
+            fetch_code: false,
+        }
+    }
+
+    pub const fn account(mut self) -> Self {
+        self.fetch_account = true;
+        self
+    }
+
+    pub const fn storage(mut self) -> Self {
+        self.fetch_storage = true;
+        self
+    }
+
+    pub const fn code(mut self) -> Self {
+        self.fetch_code = true;
+        self
+    }
+}
 
 #[derive(Clone)]
 pub struct PatchState<'a> {
@@ -10,6 +52,7 @@ pub struct PatchState<'a> {
     /// We do it as a reference to avoid situations where patch state is alive but sandbox is dropped
     /// so it will end up in the situation where RPC is not available anymore
     pub sandbox: &'a Sandbox,
+    pub initial_balance: Option<NearToken>,
 }
 
 impl<'a> PatchState<'a> {
@@ -18,6 +61,7 @@ impl<'a> PatchState<'a> {
             state: vec![],
             destination_account,
             sandbox,
+            initial_balance: None,
         }
     }
 
@@ -30,24 +74,22 @@ impl<'a> PatchState<'a> {
         self
     }
 
-    pub async fn fetch_account(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
-        let account = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "title": "view_account_by_finality",
-                    "finality": "optimistic",
-                    "request_type": "view_account",
-                    "account_id": self.destination_account
-                }
-            }),
-        )
-        .await?;
-
-        Ok(self.account(account["result"].clone()))
+    /// Fetch data from an RPC endpoint using the FetchData builder
+    pub async fn fetch_from(
+        mut self,
+        rpc: &str,
+        fetch_data: FetchData,
+    ) -> Result<Self, SandboxRpcError> {
+        if fetch_data.fetch_account {
+            self = self.fetch_account(rpc).await?;
+        }
+        if fetch_data.fetch_code {
+            self = self.fetch_code(rpc).await?;
+        }
+        if fetch_data.fetch_storage {
+            self = self.fetch_storage(rpc).await?;
+        }
+        Ok(self)
     }
 
     pub fn storage(mut self, state_key_base64: String, state_value_base64: String) -> Self {
@@ -75,43 +117,6 @@ impl<'a> PatchState<'a> {
         self
     }
 
-    pub async fn fetch_storage(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
-        let storage = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "title": "view_state_by_finality",
-                    "finality": "optimistic",
-                    "request_type": "view_state",
-                    "account_id": self.destination_account,
-                    "include_proof": false,
-                    "prefix_base64": "",
-                }
-            }),
-        )
-        .await?;
-
-        static EMPTY: Vec<serde_json::Value> = Vec::new();
-
-        Ok(self.storage_entries(
-            storage["result"]["values"]
-                .as_array()
-                .unwrap_or(&EMPTY)
-                .iter()
-                .flat_map(|state| {
-                    if let Some(data_key_base64) = state["key"].as_str() {
-                        if let Some(value_base64) = state["value"].as_str() {
-                            return Some((data_key_base64.to_owned(), value_base64.to_owned()));
-                        }
-                    }
-                    None
-                }),
-        ))
-    }
-
     pub fn code(mut self, code_base64: String) -> Self {
         self.state.push(StateRecord::Contract {
             account_id: self.destination_account.clone(),
@@ -119,30 +124,6 @@ impl<'a> PatchState<'a> {
         });
 
         self
-    }
-
-    pub async fn fetch_code(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
-        let storage = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "title": "view_code_by_finality",
-                    "finality": "optimistic",
-                    "request_type": "view_code",
-                    "account_id": self.destination_account,
-                }
-            }),
-        )
-        .await?;
-        Ok(self.code(
-            storage["result"]["code_base64"]
-                .as_str()
-                .unwrap_or_default()
-                .to_owned(),
-        ))
     }
 
     pub fn access_key(mut self, public_key_base64: String, access_key: impl Serialize) -> Self {
@@ -181,8 +162,19 @@ impl<'a> PatchState<'a> {
         self
     }
 
-    pub async fn send(&self) -> Result<(), SandboxRpcError> {
-        println!("{}", self.state.len());
+    /// Will fetch account from sandbox if account is not provided and not fetched
+    pub fn initial_balance(mut self, balance: NearToken) -> Self {
+        self.initial_balance = Some(balance);
+        self
+    }
+
+    pub async fn send(self) -> Result<(), SandboxRpcError> {
+        let records = if let Some(balance) = self.initial_balance {
+            self.process_initial_balance(balance).await?
+        } else {
+            self.state
+        };
+
         Self::send_request(
             &self.sandbox.rpc_addr,
             serde_json::json!({
@@ -190,13 +182,144 @@ impl<'a> PatchState<'a> {
                 "id": "0",
                 "method": "sandbox_patch_state",
                 "params": {
-                    "records": self.state,
+                    "records": records,
                 },
             }),
         )
         .await?;
 
         Ok(())
+    }
+
+    async fn process_initial_balance(
+        &self,
+        balance: NearToken,
+    ) -> Result<Vec<StateRecord>, SandboxRpcError> {
+        let mut records = self.state.clone();
+        // Find if there's already an account state record
+        let account_exists = records.iter_mut().find_map(|record| {
+            if let StateRecord::Account { account, .. } = record {
+                Some(account)
+            } else {
+                None
+            }
+        });
+
+        if let Some(account) = account_exists {
+            // Modify existing account
+            if let Some(obj) = account.as_object_mut() {
+                obj["amount"] = serde_json::json!(balance);
+            }
+        } else {
+            // Fetch from sandbox and modify
+            let mut account = Self::send_request(
+                &self.sandbox.rpc_addr,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "query",
+                    "params": {
+                        "finality": "optimistic",
+                        "request_type": "view_account",
+                        "account_id": self.destination_account
+                    }
+                }),
+            )
+            .await?;
+
+            if let Some(obj) = account["result"].as_object_mut() {
+                obj["amount"] = serde_json::json!(balance.to_string());
+            }
+
+            records.insert(
+                0,
+                StateRecord::Account {
+                    account_id: self.destination_account.clone(),
+                    account: account["result"].clone(),
+                },
+            );
+        }
+
+        Ok(records)
+    }
+
+    async fn fetch_account(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+        let account = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "finality": "optimistic",
+                    "request_type": "view_account",
+                    "account_id": self.destination_account
+                }
+            }),
+        )
+        .await?;
+
+        Ok(self.account(account["result"].clone()))
+    }
+
+    async fn fetch_storage(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+        let storage = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "finality": "optimistic",
+                    "request_type": "view_state",
+                    "account_id": self.destination_account,
+                    "include_proof": false,
+                    "prefix_base64": "",
+                }
+            }),
+        )
+        .await?;
+
+        static EMPTY: Vec<serde_json::Value> = Vec::new();
+
+        let entries = storage["result"]["values"]
+            .as_array()
+            .unwrap_or(&EMPTY)
+            .iter()
+            .flat_map(|state| {
+                if let Some(data_key_base64) = state["key"].as_str() {
+                    if let Some(value_base64) = state["value"].as_str() {
+                        return Some((data_key_base64.to_owned(), value_base64.to_owned()));
+                    }
+                }
+                None
+            });
+
+        Ok(self.storage_entries(entries))
+    }
+
+    async fn fetch_code(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+        let code_response = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "finality": "optimistic",
+                    "request_type": "view_code",
+                    "account_id": self.destination_account,
+                }
+            }),
+        )
+        .await?;
+
+        let code_base64 = code_response["result"]["code_base64"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+
+        Ok(self.code(code_base64))
     }
 
     async fn send_request(
@@ -257,8 +380,8 @@ pub enum StateRecord {
 
 #[cfg(test)]
 mod tests {
-    use crate::Sandbox;
-    use near_api::{Account, AccountId, Contract, NetworkConfig};
+    use crate::{FetchData, Sandbox};
+    use near_api::{Account, AccountId, Contract, NearToken, NetworkConfig};
 
     #[tokio::test]
     async fn test_patch_state() {
@@ -303,6 +426,69 @@ mod tests {
             .data;
 
         assert_eq!(account_data, sandbox_account_data);
+
+        let stats: serde_json::Value = Contract(account_id)
+            .call_function(
+                "user",
+                serde_json::json!({ "user": "akorchyn", "periods": ["all-time"] }),
+            )
+            .unwrap()
+            .read_only()
+            .fetch_from(&sandbox_network)
+            .await
+            .unwrap()
+            .data;
+
+        assert_eq!(stats["name"], "akorchyn");
+        assert_eq!(stats["id"], 0);
+
+        println!("{:#?}", stats);
+    }
+
+    #[tokio::test]
+    async fn test_patch_state_with_own_fetcher() {
+        let sandbox = Sandbox::start_sandbox().await.unwrap();
+        let sandbox_network =
+            NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
+        let account_id: AccountId = "race-of-sloths.testnet".parse().unwrap();
+
+        let rpc = NetworkConfig::testnet();
+        let rpc = rpc.rpc_endpoints.first().unwrap().url.as_ref();
+
+        sandbox
+            .patch_state(account_id.clone())
+            .fetch_from(rpc, FetchData::ALL)
+            .await
+            .unwrap()
+            .initial_balance(NearToken::from_near(666))
+            .send()
+            .await
+            .unwrap();
+
+        let sandbox_account_data = Account(account_id.clone())
+            .view()
+            .fetch_from(&sandbox_network)
+            .await
+            .unwrap()
+            .data;
+
+        assert_eq!(NearToken::from_near(666), sandbox_account_data.amount);
+        assert_eq!(
+            Contract(account_id.clone())
+                .wasm()
+                .fetch_from(&NetworkConfig::testnet())
+                .await
+                .unwrap()
+                .data
+                .code_base64,
+            Contract(account_id.clone())
+                .wasm()
+                .fetch_from(&sandbox_network)
+                .await
+                .unwrap()
+                .data
+                .code_base64
+        );
 
         let stats: serde_json::Value = Contract(account_id)
             .call_function(
