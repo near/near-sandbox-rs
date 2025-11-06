@@ -1,7 +1,7 @@
 use near_account_id::AccountId;
 use serde::Serialize;
 
-use crate::{error_kind::SandboxRpcError, Sandbox};
+use crate::{config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY, error_kind::SandboxRpcError, Sandbox};
 
 #[derive(Clone)]
 pub struct PatchState<'a> {
@@ -69,6 +69,19 @@ impl<'a> PatchState<'a> {
             account_id: self.destination_account.clone(),
             public_key_base64,
             access_key: serde_json::to_value(access_key).unwrap(),
+        });
+
+        self
+    }
+
+    pub fn with_default_access_key(mut self) -> Self {
+        self.state.push(StateRecord::AccessKey {
+            account_id: self.destination_account.clone(),
+            public_key_base64: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_owned(),
+            access_key: serde_json::json!({
+                "nonce": 0,
+                "permission": "FullAccess"
+            }),
         });
 
         self

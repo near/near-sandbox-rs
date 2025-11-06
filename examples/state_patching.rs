@@ -1,4 +1,8 @@
-use near_sandbox::Sandbox;
+use near_api::{NearToken, Signer};
+use near_sandbox::{
+    config::{DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY},
+    Sandbox,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -34,6 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .account(account_data.clone())
         .code(code.code_base64)
         .storage_entries(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
+        .with_default_access_key()
         .send()
         .await
         .unwrap();
@@ -47,6 +52,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .data;
 
     assert_eq!(account_data, sandbox_account_data);
+
+    near_api::Tokens::account(account_id)
+        .send_to(DEFAULT_GENESIS_ACCOUNT.to_owned())
+        .near(NearToken::from_near(1))
+        .with_signer(
+            Signer::new(Signer::from_secret_key(
+                DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.parse().unwrap(),
+            ))
+            .unwrap(),
+        )
+        .send_to(&sandbox_network)
+        .await
+        .unwrap()
+        .assert_success();
 
     Ok(())
 }
