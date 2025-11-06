@@ -30,6 +30,26 @@ impl<'a> PatchState<'a> {
         self
     }
 
+    pub async fn fetch_account(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
+        let account = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "title": "view_account_by_finality",
+                    "finality": "optimistic",
+                    "request_type": "view_account",
+                    "account_id": self.destination_account
+                }
+            }),
+        )
+        .await?;
+
+        Ok(self.account(account["result"].clone()))
+    }
+
     pub fn storage(mut self, state_key_base64: String, state_value_base64: String) -> Self {
         self.state.push(StateRecord::Data {
             account_id: self.destination_account.clone(),
@@ -55,6 +75,43 @@ impl<'a> PatchState<'a> {
         self
     }
 
+    pub async fn fetch_storage(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
+        let storage = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "title": "view_state_by_finality",
+                    "finality": "optimistic",
+                    "request_type": "view_state",
+                    "account_id": self.destination_account,
+                    "include_proof": false,
+                    "prefix_base64": "",
+                }
+            }),
+        )
+        .await?;
+
+        static EMPTY: Vec<serde_json::Value> = Vec::new();
+
+        Ok(self.storage_entries(
+            storage["result"]["values"]
+                .as_array()
+                .unwrap_or(&EMPTY)
+                .iter()
+                .flat_map(|state| {
+                    if let Some(data_key_base64) = state["key"].as_str() {
+                        if let Some(value_base64) = state["value"].as_str() {
+                            return Some((data_key_base64.to_owned(), value_base64.to_owned()));
+                        }
+                    }
+                    None
+                }),
+        ))
+    }
+
     pub fn code(mut self, code_base64: String) -> Self {
         self.state.push(StateRecord::Contract {
             account_id: self.destination_account.clone(),
@@ -62,6 +119,30 @@ impl<'a> PatchState<'a> {
         });
 
         self
+    }
+
+    pub async fn fetch_code(self, from_rpc: &str) -> Result<Self, SandboxRpcError> {
+        let storage = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "title": "view_code_by_finality",
+                    "finality": "optimistic",
+                    "request_type": "view_code",
+                    "account_id": self.destination_account,
+                }
+            }),
+        )
+        .await?;
+        Ok(self.code(
+            storage["result"]["code_base64"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+        ))
     }
 
     pub fn access_key(mut self, public_key_base64: String, access_key: impl Serialize) -> Self {
@@ -74,6 +155,9 @@ impl<'a> PatchState<'a> {
         self
     }
 
+    /// Adds [DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY] as FullAccess key to the account
+    ///
+    /// You can get the private key from [crate::config::DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY] constant
     pub fn with_default_access_key(mut self) -> Self {
         self.state.push(StateRecord::AccessKey {
             account_id: self.destination_account.clone(),
@@ -98,19 +182,29 @@ impl<'a> PatchState<'a> {
     }
 
     pub async fn send(&self) -> Result<(), SandboxRpcError> {
-        let client = reqwest::Client::new();
-        let result = client
-            .post(self.sandbox.rpc_addr.clone())
-            .json(&serde_json::json!({
+        println!("{}", self.state.len());
+        Self::send_request(
+            &self.sandbox.rpc_addr,
+            serde_json::json!({
                 "jsonrpc": "2.0",
                 "id": "0",
                 "method": "sandbox_patch_state",
                 "params": {
                     "records": self.state,
                 },
-            }))
-            .send()
-            .await?;
+            }),
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    async fn send_request(
+        rpc: &str,
+        json_body: serde_json::Value,
+    ) -> Result<serde_json::Value, SandboxRpcError> {
+        let client = reqwest::Client::new();
+        let result = client.post(rpc).json(&json_body).send().await?;
 
         let body = result.json::<serde_json::Value>().await?;
 
@@ -118,7 +212,7 @@ impl<'a> PatchState<'a> {
             return Err(SandboxRpcError::SandboxRpcError(body["error"].to_string()));
         }
 
-        Ok(())
+        Ok(body)
     }
 }
 
