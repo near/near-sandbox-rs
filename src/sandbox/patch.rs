@@ -13,9 +13,9 @@ pub struct FetchData {
 }
 
 impl FetchData {
-    pub const NONE: FetchData = FetchData::new();
+    pub const NONE: Self = Self::new();
 
-    pub const ALL: FetchData = FetchData {
+    pub const ALL: Self = Self {
         fetch_account: true,
         fetch_storage: true,
         fetch_code: true,
@@ -163,7 +163,7 @@ impl<'a> PatchState<'a> {
     }
 
     /// Will fetch account from sandbox if account is not provided and not fetched
-    pub fn initial_balance(mut self, balance: NearToken) -> Self {
+    pub const fn initial_balance(mut self, balance: NearToken) -> Self {
         self.initial_balance = Some(balance);
         self
     }
