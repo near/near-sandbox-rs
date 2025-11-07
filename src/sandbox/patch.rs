@@ -215,6 +215,24 @@ impl<'a> PatchState<'a> {
             )
             .await?;
 
+        // NOTE: For some reason, patching anything with account/contract related items takes two patches
+        // otherwise its super non-deterministic and mostly just fails to locate the account afterwards: ¯\_(ツ)_/¯
+        // From: https://github.com/near/near-workspaces-rs/commit/2b72b9b8491c3140ff2d30b0c45d09b200cb027b
+        // Also: https://github.com/near/near-workspaces-rs/blob/918f6deede97170a125c1fd1d80097685015ad2a/workspaces/src/rpc/patch.rs#L328
+        self.sandbox
+            .send_request(
+                &self.sandbox.rpc_addr,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "sandbox_patch_state",
+                    "params": {
+                        "records": records,
+                    },
+                }),
+            )
+            .await?;
+
         Ok(())
     }
 
