@@ -16,21 +16,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let rpc = rpc.rpc_endpoints.first().unwrap().url.as_ref();
 
     sandbox
-        .patch_state(account_id.clone())
-        .fetch_from(
-            rpc,
-            near_sandbox::FetchData::NONE.account().code().storage(),
-        )
-        // Or you can do like that:
-        // .fetch_from(rpc, near_sandbox::FetchData::ALL)
-        .await
-        .unwrap()
-        .with_default_access_key()
+        .import_account(account_id.clone())
+        .with_storage()
         .initial_balance(NearToken::from_near(666))
-        .send()
+        .send(rpc)
         .await
         .unwrap();
 
+    // Can be signed with default access key
     near_api::Tokens::account(account_id.clone())
         .send_to(DEFAULT_GENESIS_ACCOUNT.to_owned())
         .near(NearToken::from_near(1))
@@ -45,6 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .unwrap()
         .assert_success();
 
+    // Storage and contract is available
     let value: serde_json::Value = near_api::Contract(account_id)
         .call_function(
             "user",

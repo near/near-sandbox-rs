@@ -12,8 +12,10 @@ use tracing::info;
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
 use crate::runner::{init_with_version, run_with_options_with_version};
+use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
 
+pub mod account;
 pub mod patch;
 
 // Must be an IP address as `neard` expects socket address for network address.
@@ -307,6 +309,56 @@ impl Sandbox {
 
     pub const fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
         PatchState::new(account_id, self)
+    }
+
+    /// Helper function to simplify importing an account from an RPC endpoint
+    /// into the sandbox.
+    ///
+    /// # Arguments
+    /// * `account_id` - the account id to import
+    /// * `from_rpc` - the RPC endpoint to fetch the account from
+    /// * `with_storage` - whether to fetch the storage of the account
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use near_sandbox::*;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let sandbox = Sandbox::start_sandbox().await?;
+    /// let account_id = "user.testnet".parse()?;
+    /// sandbox.import_account(account_id, "https://rpc.testnet.near.org", true).await?.send().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const fn import_account(&self, account_id: AccountId) -> AccountImport<'_> {
+        AccountImport::new(account_id, self)
+    }
+
+    /// Creates a new account in the sandbox. By default, the account will have [crate::config::DEFAULT_GENESIS_ACCOUNT_BALANCE]
+    /// and will have [crate::config::DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY] as the full access private key.
+    ///
+    /// # Arguments
+    /// * `account_id` - the account id to create
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let sandbox = Sandbox::start_sandbox().await?;
+    /// let account_id = "user.testnet".parse()?;
+    /// sandbox.create_account(account_id)
+    ///     .initial_balance(NearToken::from_near(1))
+    ///     .public_key("ed25519:...".to_string())
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const fn create_account(&self, account_id: AccountId) -> AccountCreation<'_> {
+        AccountCreation::new(account_id, self)
     }
 }
 

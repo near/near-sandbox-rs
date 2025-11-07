@@ -10,6 +10,7 @@ pub struct FetchData {
     fetch_account: bool,
     fetch_storage: bool,
     fetch_code: bool,
+    fetch_access_keys: bool,
 }
 
 impl FetchData {
@@ -19,6 +20,7 @@ impl FetchData {
         fetch_account: true,
         fetch_storage: true,
         fetch_code: true,
+        fetch_access_keys: true,
     };
 
     pub const fn new() -> Self {
@@ -26,6 +28,7 @@ impl FetchData {
             fetch_account: false,
             fetch_storage: false,
             fetch_code: false,
+            fetch_access_keys: false,
         }
     }
 
@@ -43,6 +46,11 @@ impl FetchData {
         self.fetch_code = true;
         self
     }
+
+    pub const fn access_keys(mut self) -> Self {
+        self.fetch_access_keys = true;
+        self
+    }
 }
 
 #[derive(Clone)]
@@ -56,6 +64,8 @@ pub struct PatchState<'a> {
 }
 
 impl<'a> PatchState<'a> {
+    const EMPTY: Vec<serde_json::Value> = Vec::new();
+
     pub const fn new(destination_account: AccountId, sandbox: &'a Sandbox) -> Self {
         Self {
             state: vec![],
@@ -76,18 +86,31 @@ impl<'a> PatchState<'a> {
 
     /// Fetch data from an RPC endpoint using the FetchData builder
     pub async fn fetch_from(
+        self,
+        rpc: &str,
+        fetch_data: FetchData,
+    ) -> Result<Self, SandboxRpcError> {
+        let account_id = self.destination_account.clone();
+        self.fetch_from_account(&account_id, rpc, fetch_data).await
+    }
+
+    pub async fn fetch_from_account(
         mut self,
+        account_id: &AccountId,
         rpc: &str,
         fetch_data: FetchData,
     ) -> Result<Self, SandboxRpcError> {
         if fetch_data.fetch_account {
-            self = self.fetch_account(rpc).await?;
+            self = self.fetch_account(account_id, rpc).await?;
         }
         if fetch_data.fetch_code {
-            self = self.fetch_code(rpc).await?;
+            self = self.fetch_code(account_id, rpc).await?;
         }
         if fetch_data.fetch_storage {
-            self = self.fetch_storage(rpc).await?;
+            self = self.fetch_storage(account_id, rpc).await?;
+        }
+        if fetch_data.fetch_access_keys {
+            self = self.fetch_access_keys(account_id, rpc).await?;
         }
         Ok(self)
     }
@@ -243,7 +266,11 @@ impl<'a> PatchState<'a> {
         Ok(records)
     }
 
-    async fn fetch_account(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+    async fn fetch_account(
+        self,
+        account_id: &AccountId,
+        from_rpc: &str,
+    ) -> Result<PatchState<'a>, SandboxRpcError> {
         let account = Self::send_request(
             from_rpc,
             serde_json::json!({
@@ -253,7 +280,7 @@ impl<'a> PatchState<'a> {
                 "params": {
                     "finality": "optimistic",
                     "request_type": "view_account",
-                    "account_id": self.destination_account
+                    "account_id": account_id
                 }
             }),
         )
@@ -262,7 +289,11 @@ impl<'a> PatchState<'a> {
         Ok(self.account(account["result"].clone()))
     }
 
-    async fn fetch_storage(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+    async fn fetch_storage(
+        self,
+        account_id: &AccountId,
+        from_rpc: &str,
+    ) -> Result<PatchState<'a>, SandboxRpcError> {
         let storage = Self::send_request(
             from_rpc,
             serde_json::json!({
@@ -272,7 +303,7 @@ impl<'a> PatchState<'a> {
                 "params": {
                     "finality": "optimistic",
                     "request_type": "view_state",
-                    "account_id": self.destination_account,
+                    "account_id": account_id,
                     "include_proof": false,
                     "prefix_base64": "",
                 }
@@ -280,11 +311,10 @@ impl<'a> PatchState<'a> {
         )
         .await?;
 
-        static EMPTY: Vec<serde_json::Value> = Vec::new();
-
+        let default_entry = Self::EMPTY;
         let entries = storage["result"]["values"]
             .as_array()
-            .unwrap_or(&EMPTY)
+            .unwrap_or(&default_entry)
             .iter()
             .flat_map(|state| {
                 if let Some(data_key_base64) = state["key"].as_str() {
@@ -298,7 +328,11 @@ impl<'a> PatchState<'a> {
         Ok(self.storage_entries(entries))
     }
 
-    async fn fetch_code(self, from_rpc: &str) -> Result<PatchState<'a>, SandboxRpcError> {
+    async fn fetch_code(
+        self,
+        account_id: &AccountId,
+        from_rpc: &str,
+    ) -> Result<PatchState<'a>, SandboxRpcError> {
         let code_response = Self::send_request(
             from_rpc,
             serde_json::json!({
@@ -308,7 +342,7 @@ impl<'a> PatchState<'a> {
                 "params": {
                     "finality": "optimistic",
                     "request_type": "view_code",
-                    "account_id": self.destination_account,
+                    "account_id": account_id,
                 }
             }),
         )
@@ -320,6 +354,42 @@ impl<'a> PatchState<'a> {
             .to_owned();
 
         Ok(self.code(code_base64))
+    }
+
+    async fn fetch_access_keys(
+        mut self,
+        account_id: &AccountId,
+        from_rpc: &str,
+    ) -> Result<PatchState<'a>, SandboxRpcError> {
+        let access_keys = Self::send_request(
+            from_rpc,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "query",
+                "params": {
+                    "finality": "optimistic",
+                    "request_type": "view_access_key_list",
+                    "account_id": account_id,
+                }
+            }),
+        )
+        .await?;
+
+        for access_key in access_keys["result"]["keys"]
+            .as_array()
+            .unwrap_or(&Self::EMPTY)
+        {
+            self = self.access_key(
+                access_key["public_key"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned(),
+                access_key["access_key"].clone(),
+            );
+        }
+
+        Ok(self)
     }
 
     async fn send_request(
