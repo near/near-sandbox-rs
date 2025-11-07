@@ -6,8 +6,6 @@ use crate::{config::DEFAULT_ACCOUNT_FOR_CLONING, error_kind::SandboxRpcError, Fe
 #[derive(Clone)]
 pub struct AccountCreation<'a> {
     pub account_id: AccountId,
-    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
-    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
 
     pub balance: Option<NearToken>,
@@ -68,8 +66,6 @@ impl<'a> AccountCreation<'a> {
 #[derive(Clone)]
 pub struct AccountImport<'a, 'b> {
     pub account_id: AccountId,
-    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
-    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
     pub from_rpc: &'b str,
 

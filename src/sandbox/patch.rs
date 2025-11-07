@@ -57,8 +57,6 @@ impl FetchData {
 pub struct PatchState<'a> {
     pub destination_account: AccountId,
     pub state: Vec<StateRecord>,
-    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
-    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
     pub initial_balance: Option<NearToken>,
 }
