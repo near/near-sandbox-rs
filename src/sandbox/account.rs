@@ -54,6 +54,8 @@ impl<'a> AccountCreation<'a> {
                     "permission": "FullAccess"
                 }),
             );
+        } else {
+            patch = patch.with_default_access_key();
         }
         patch.send().await?;
 
@@ -68,6 +70,7 @@ pub struct AccountImport<'a> {
 
     pub fetch_data: FetchData,
     pub initial_balance: Option<NearToken>,
+    pub public_key: Option<String>,
 }
 
 impl<'a> AccountImport<'a> {
@@ -77,6 +80,7 @@ impl<'a> AccountImport<'a> {
             sandbox,
             fetch_data: FetchData::NONE.account().code(),
             initial_balance: None,
+            public_key: None,
         }
     }
 
@@ -95,6 +99,11 @@ impl<'a> AccountImport<'a> {
         self
     }
 
+    pub fn public_key(mut self, public_key: String) -> Self {
+        self.public_key = Some(public_key);
+        self
+    }
+
     pub async fn send(self, from_rpc: &str) -> Result<(), SandboxRpcError> {
         let mut patch = self
             .sandbox
@@ -102,9 +111,22 @@ impl<'a> AccountImport<'a> {
             .fetch_from(from_rpc, self.fetch_data)
             .await?;
 
+        if let Some(public_key) = self.public_key {
+            patch = patch.access_key(
+                public_key,
+                serde_json::json!({
+                    "nonce": 0,
+                    "permission": "FullAccess"
+                }),
+            );
+        } else {
+            patch = patch.with_default_access_key();
+        }
+
         if let Some(balance) = self.initial_balance {
             patch = patch.initial_balance(balance);
         }
+
         patch.send().await?;
 
         Ok(())

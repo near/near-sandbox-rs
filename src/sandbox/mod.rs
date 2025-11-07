@@ -312,7 +312,7 @@ impl Sandbox {
     }
 
     /// Helper function to simplify importing an account from an RPC endpoint
-    /// into the sandbox.
+    /// into the sandbox. By default, the account will add [crate::config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY] as the full access public key.
     ///
     /// # Arguments
     /// * `account_id` - the account id to import
