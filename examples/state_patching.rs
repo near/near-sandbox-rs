@@ -16,10 +16,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let rpc = rpc.rpc_endpoints.first().unwrap().url.as_ref();
 
     sandbox
-        .import_account(account_id.clone())
+        .import_account(rpc, account_id.clone())
         .with_storage()
         .initial_balance(NearToken::from_near(666))
-        .send(rpc)
+        .send()
         .await
         .unwrap();
 

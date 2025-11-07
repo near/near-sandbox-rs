@@ -97,6 +97,7 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
+    client: reqwest::Client,
 }
 
 impl Sandbox {
@@ -251,6 +252,7 @@ impl Sandbox {
             rpc_port_lock,
             net_port_lock,
             process: child,
+            client: reqwest::Client::new(),
         })
     }
 
@@ -284,26 +286,18 @@ impl Sandbox {
     }
 
     pub async fn fast_forward(&self, blocks: u64) -> Result<(), SandboxRpcError> {
-        let client = reqwest::Client::new();
-        let result = client
-            .post(self.rpc_addr.clone())
-            .json(&serde_json::json!({
+        self.send_request(
+            &self.rpc_addr,
+            serde_json::json!({
                 "jsonrpc": "2.0",
                 "id": "0",
                 "method": "sandbox_fast_forward",
                 "params": {
                     "delta_height": blocks,
                 },
-            }))
-            .send()
-            .await?;
-
-        let body = result.json::<serde_json::Value>().await?;
-
-        if body["error"].is_object() {
-            return Err(SandboxRpcError::SandboxRpcError(body["error"].to_string()));
-        }
-
+            }),
+        )
+        .await?;
         Ok(())
     }
 
@@ -317,7 +311,6 @@ impl Sandbox {
     /// # Arguments
     /// * `account_id` - the account id to import
     /// * `from_rpc` - the RPC endpoint to fetch the account from
-    /// * `with_storage` - whether to fetch the storage of the account
     ///
     /// # Example
     /// ```rust,no_run
@@ -326,12 +319,16 @@ impl Sandbox {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let sandbox = Sandbox::start_sandbox().await?;
     /// let account_id = "user.testnet".parse()?;
-    /// sandbox.import_account(account_id, "https://rpc.testnet.near.org", true).await?.send().await?;
+    /// sandbox.import_account("https://rpc.testnet.near.org", account_id).send().await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub const fn import_account(&self, account_id: AccountId) -> AccountImport<'_> {
-        AccountImport::new(account_id, self)
+    pub const fn import_account<'a, 'b>(
+        &'a self,
+        from_rpc: &'b str,
+        account_id: AccountId,
+    ) -> AccountImport<'a, 'b> {
+        AccountImport::new(account_id, from_rpc, self)
     }
 
     /// Creates a new account in the sandbox. By default, the account will have [crate::config::DEFAULT_GENESIS_ACCOUNT_BALANCE]
@@ -359,6 +356,22 @@ impl Sandbox {
     /// ```
     pub const fn create_account(&self, account_id: AccountId) -> AccountCreation<'_> {
         AccountCreation::new(account_id, self)
+    }
+
+    async fn send_request(
+        &self,
+        rpc: &str,
+        json_body: serde_json::Value,
+    ) -> Result<serde_json::Value, SandboxRpcError> {
+        let result = self.client.post(rpc).json(&json_body).send().await?;
+
+        let body = result.json::<serde_json::Value>().await?;
+
+        if let Some(error) = body.get("error") {
+            return Err(SandboxRpcError::SandboxRpcError(error.to_string()));
+        }
+
+        Ok(body)
     }
 }
 

@@ -57,8 +57,8 @@ impl FetchData {
 pub struct PatchState<'a> {
     pub destination_account: AccountId,
     pub state: Vec<StateRecord>,
-    /// We do it as a reference to avoid situations where patch state is alive but sandbox is dropped
-    /// so it will end up in the situation where RPC is not available anymore
+    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
+    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
     pub initial_balance: Option<NearToken>,
 }
@@ -185,6 +185,11 @@ impl<'a> PatchState<'a> {
         self
     }
 
+    pub fn state_record(mut self, state_record: StateRecord) -> Self {
+        self.state.push(state_record);
+        self
+    }
+
     /// Will fetch account from sandbox if account is not provided and not fetched
     pub const fn initial_balance(mut self, balance: NearToken) -> Self {
         self.initial_balance = Some(balance);
@@ -198,18 +203,19 @@ impl<'a> PatchState<'a> {
             self.state
         };
 
-        Self::send_request(
-            &self.sandbox.rpc_addr,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "sandbox_patch_state",
-                "params": {
-                    "records": records,
-                },
-            }),
-        )
-        .await?;
+        self.sandbox
+            .send_request(
+                &self.sandbox.rpc_addr,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "sandbox_patch_state",
+                    "params": {
+                        "records": records,
+                    },
+                }),
+            )
+            .await?;
 
         Ok(())
     }
@@ -235,22 +241,28 @@ impl<'a> PatchState<'a> {
             }
         } else {
             // Fetch from sandbox and modify
-            let mut account = Self::send_request(
-                &self.sandbox.rpc_addr,
-                serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "id": "0",
-                    "method": "query",
-                    "params": {
-                        "finality": "optimistic",
-                        "request_type": "view_account",
-                        "account_id": self.destination_account
-                    }
-                }),
-            )
-            .await?;
+            let mut account = self
+                .sandbox
+                .send_request(
+                    &self.sandbox.rpc_addr,
+                    serde_json::json!({
+                        "jsonrpc": "2.0",
+                        "id": "0",
+                        "method": "query",
+                        "params": {
+                            "finality": "optimistic",
+                            "request_type": "view_account",
+                            "account_id": self.destination_account
+                        }
+                    }),
+                )
+                .await?;
 
-            if let Some(obj) = account["result"].as_object_mut() {
+            if let Some(obj) = account
+                .get_mut("result")
+                .ok_or(SandboxRpcError::UnexpectedResponse)?
+                .as_object_mut()
+            {
                 obj["amount"] = serde_json::json!(balance.to_string());
             }
 
@@ -258,7 +270,10 @@ impl<'a> PatchState<'a> {
                 0,
                 StateRecord::Account {
                     account_id: self.destination_account.clone(),
-                    account: account["result"].clone(),
+                    account: account
+                        .get_mut("result")
+                        .ok_or(SandboxRpcError::UnexpectedResponse)?
+                        .clone(),
                 },
             );
         }
@@ -271,22 +286,28 @@ impl<'a> PatchState<'a> {
         account_id: &AccountId,
         from_rpc: &str,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
-        let account = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "finality": "optimistic",
-                    "request_type": "view_account",
-                    "account_id": account_id
-                }
-            }),
-        )
-        .await?;
+        let account = self
+            .sandbox
+            .send_request(
+                from_rpc,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "query",
+                    "params": {
+                        "finality": "optimistic",
+                        "request_type": "view_account",
+                        "account_id": account_id
+                    }
+                }),
+            )
+            .await?;
 
-        Ok(self.account(account["result"].clone()))
+        Ok(self.account(
+            account
+                .get("result")
+                .ok_or(SandboxRpcError::UnexpectedResponse)?,
+        ))
     }
 
     async fn fetch_storage(
@@ -294,35 +315,39 @@ impl<'a> PatchState<'a> {
         account_id: &AccountId,
         from_rpc: &str,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
-        let storage = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "finality": "optimistic",
-                    "request_type": "view_state",
-                    "account_id": account_id,
-                    "include_proof": false,
-                    "prefix_base64": "",
-                }
-            }),
-        )
-        .await?;
+        let storage = self
+            .sandbox
+            .send_request(
+                from_rpc,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "query",
+                    "params": {
+                        "finality": "optimistic",
+                        "request_type": "view_state",
+                        "account_id": account_id,
+                        "include_proof": false,
+                        "prefix_base64": "",
+                    }
+                }),
+            )
+            .await?;
 
         let default_entry = Self::EMPTY;
-        let entries = storage["result"]["values"]
+        let entries = storage
+            .get("result")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
+            .get("values")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
             .as_array()
             .unwrap_or(&default_entry)
             .iter()
             .flat_map(|state| {
-                if let Some(data_key_base64) = state["key"].as_str() {
-                    if let Some(value_base64) = state["value"].as_str() {
-                        return Some((data_key_base64.to_owned(), value_base64.to_owned()));
-                    }
-                }
-                None
+                Some((
+                    state.get("key")?.as_str()?.to_owned(),
+                    state.get("value")?.as_str()?.to_owned(),
+                ))
             });
 
         Ok(self.storage_entries(entries))
@@ -333,22 +358,28 @@ impl<'a> PatchState<'a> {
         account_id: &AccountId,
         from_rpc: &str,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
-        let code_response = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "finality": "optimistic",
-                    "request_type": "view_code",
-                    "account_id": account_id,
-                }
-            }),
-        )
-        .await?;
+        let code_response = self
+            .sandbox
+            .send_request(
+                from_rpc,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "query",
+                    "params": {
+                        "finality": "optimistic",
+                        "request_type": "view_code",
+                        "account_id": account_id,
+                    }
+                }),
+            )
+            .await?;
 
-        let code_base64 = code_response["result"]["code_base64"]
+        let code_base64 = code_response
+            .get("result")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
+            .get("code_base64")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
             .as_str()
             .unwrap_or_default()
             .to_owned();
@@ -361,51 +392,46 @@ impl<'a> PatchState<'a> {
         account_id: &AccountId,
         from_rpc: &str,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
-        let access_keys = Self::send_request(
-            from_rpc,
-            serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": "0",
-                "method": "query",
-                "params": {
-                    "finality": "optimistic",
-                    "request_type": "view_access_key_list",
-                    "account_id": account_id,
-                }
-            }),
-        )
-        .await?;
+        let access_keys = self
+            .sandbox
+            .send_request(
+                from_rpc,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "query",
+                    "params": {
+                        "finality": "optimistic",
+                        "request_type": "view_access_key_list",
+                        "account_id": account_id,
+                    }
+                }),
+            )
+            .await?;
 
-        for access_key in access_keys["result"]["keys"]
+        for access_key in access_keys
+            .get("result")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
+            .get("keys")
+            .ok_or(SandboxRpcError::UnexpectedResponse)?
             .as_array()
             .unwrap_or(&Self::EMPTY)
         {
             self = self.access_key(
-                access_key["public_key"]
+                access_key
+                    .get("public_key")
+                    .ok_or(SandboxRpcError::UnexpectedResponse)?
                     .as_str()
                     .unwrap_or_default()
                     .to_owned(),
-                access_key["access_key"].clone(),
+                access_key
+                    .get("access_key")
+                    .ok_or(SandboxRpcError::UnexpectedResponse)?
+                    .clone(),
             );
         }
 
         Ok(self)
-    }
-
-    async fn send_request(
-        rpc: &str,
-        json_body: serde_json::Value,
-    ) -> Result<serde_json::Value, SandboxRpcError> {
-        let client = reqwest::Client::new();
-        let result = client.post(rpc).json(&json_body).send().await?;
-
-        let body = result.json::<serde_json::Value>().await?;
-
-        if body["error"].is_object() {
-            return Err(SandboxRpcError::SandboxRpcError(body["error"].to_string()));
-        }
-
-        Ok(body)
     }
 }
 

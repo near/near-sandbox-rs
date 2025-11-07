@@ -6,6 +6,8 @@ use crate::{config::DEFAULT_ACCOUNT_FOR_CLONING, error_kind::SandboxRpcError, Fe
 #[derive(Clone)]
 pub struct AccountCreation<'a> {
     pub account_id: AccountId,
+    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
+    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
 
     pub balance: Option<NearToken>,
@@ -64,20 +66,24 @@ impl<'a> AccountCreation<'a> {
 }
 
 #[derive(Clone)]
-pub struct AccountImport<'a> {
+pub struct AccountImport<'a, 'b> {
     pub account_id: AccountId,
+    /// We keep a reference to the Sandbox (while needing only rpc_addr) to block users from
+    /// destroying the Sandbox while this object is alive
     pub sandbox: &'a Sandbox,
+    pub from_rpc: &'b str,
 
     pub fetch_data: FetchData,
     pub initial_balance: Option<NearToken>,
     pub public_key: Option<String>,
 }
 
-impl<'a> AccountImport<'a> {
-    pub const fn new(account_id: AccountId, sandbox: &'a Sandbox) -> Self {
+impl<'a, 'b> AccountImport<'a, 'b> {
+    pub const fn new(account_id: AccountId, from_rpc: &'b str, sandbox: &'a Sandbox) -> Self {
         Self {
             account_id,
             sandbox,
+            from_rpc,
             fetch_data: FetchData::NONE.account().code(),
             initial_balance: None,
             public_key: None,
@@ -104,11 +110,11 @@ impl<'a> AccountImport<'a> {
         self
     }
 
-    pub async fn send(self, from_rpc: &str) -> Result<(), SandboxRpcError> {
+    pub async fn send(self) -> Result<(), SandboxRpcError> {
         let mut patch = self
             .sandbox
             .patch_state(self.account_id.clone())
-            .fetch_from(from_rpc, self.fetch_data)
+            .fetch_from(self.from_rpc, self.fetch_data)
             .await?;
 
         if let Some(public_key) = self.public_key {

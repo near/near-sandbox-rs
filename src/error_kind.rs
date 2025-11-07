@@ -36,6 +36,9 @@ pub enum SandboxRpcError {
     #[error("Request error: {0}")]
     RequestError(#[from] reqwest::Error),
 
+    #[error("Unexpected response from the RPC")]
+    UnexpectedResponse,
+
     #[error("Sandbox RPC error: {0}")]
     SandboxRpcError(String),
 }
