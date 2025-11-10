@@ -107,8 +107,7 @@ impl Sandbox {
    Replace the call with:
    {}
 "#,
-            LATEST_SANDBOX_VERSION,
-            method_suggestion
+            LATEST_SANDBOX_VERSION, method_suggestion
         );
     }
 
