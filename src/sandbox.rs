@@ -95,6 +95,23 @@ pub struct Sandbox {
 }
 
 impl Sandbox {
+    /// Helper function to print warning with caller location
+    #[track_caller]
+    fn print_version_warning(method_suggestion: &str) {
+        eprintln!(
+            r#"
+⚠️  WARNING: Using auto-fetched nearcore version: {}
+⚠️  This version updates automatically and may cause CI failures due to breaking changes.
+⚠️  For production/CI use, we strongly recommend locking to a specific version:
+
+   Replace the call with:
+   {}
+"#,
+            LATEST_SANDBOX_VERSION,
+            method_suggestion
+        );
+    }
+
     /// Start a new sandbox with the default near-sandbox-utils version.
     ///
     /// # Example
@@ -111,15 +128,10 @@ impl Sandbox {
     /// # }
     /// ```
     pub async fn start_sandbox() -> Result<Self, SandboxError> {
-        eprintln!(
-            r#"
-⚠️  WARNING: Using auto-fetched nearcore version: {}
-⚠️  This version updates automatically and may cause CI failures due to breaking changes.
-⚠️  For production/CI use, we strongly recommend locking to a specific version:
-   Sandbox::start_sandbox_with_version("{}")
-"#,
-            LATEST_SANDBOX_VERSION, LATEST_SANDBOX_VERSION
-        );
+        Self::print_version_warning(&format!(
+            "Sandbox::start_sandbox_with_version(\"{}\")",
+            LATEST_SANDBOX_VERSION
+        ));
         Self::start_sandbox_with_config_and_version(
             SandboxConfig::default(),
             LATEST_SANDBOX_VERSION,
@@ -180,15 +192,10 @@ impl Sandbox {
     /// # }
     /// ```
     pub async fn start_sandbox_with_config(config: SandboxConfig) -> Result<Self, SandboxError> {
-        eprintln!(
-            r#"
-⚠️  WARNING: Using auto-fetched nearcore version: {}
-⚠️  This version updates automatically and may cause CI failures due to breaking changes.
-⚠️  For production/CI use, we strongly recommend locking to a specific version:
-   Sandbox::start_sandbox_with_config_and_version(config, "{}")
-"#,
-            LATEST_SANDBOX_VERSION, LATEST_SANDBOX_VERSION
-        );
+        Self::print_version_warning(&format!(
+            "Sandbox::start_sandbox_with_config_and_version(config, \"{}\")",
+            LATEST_SANDBOX_VERSION
+        ));
         Self::start_sandbox_with_config_and_version(config, LATEST_SANDBOX_VERSION).await
     }
 
