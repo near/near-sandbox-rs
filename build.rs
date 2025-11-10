@@ -30,9 +30,15 @@ fn main() {
     } else {
         // Try to fetch the latest version from GitHub
         let version = fetch_latest_version().unwrap_or_else(|e| {
-            eprintln!("Warning: Failed to fetch latest nearcore version: {}", e);
-            eprintln!("Using fallback version 2.9.0");
-            "2.9.0".to_string()
+            panic!(
+                "Failed to fetch latest nearcore version: {}\n\
+                \n\
+                This build requires fetching the latest nearcore version from GitHub.\n\
+                Possible solutions:\n\
+                1. Check your internet connection\n\
+                2. If GitHub API is rate-limited, wait and try again",
+                e
+            );
         });
 
         // Cache the version for future builds
