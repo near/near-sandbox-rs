@@ -1,4 +1,4 @@
-use near_api::{NearToken, NetworkConfig, Signer};
+use near_api::{NearToken, RPCEndpoint, Signer};
 use near_sandbox::{
     config::{DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY},
     Sandbox,
@@ -12,11 +12,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let account_id: near_api::AccountId = "race-of-sloths.testnet".parse().unwrap();
 
-    let rpc = NetworkConfig::testnet();
-    let rpc = rpc.rpc_endpoints.first().unwrap().url.clone();
-
     sandbox
-        .import_account(rpc, account_id.clone())
+        .import_account(RPCEndpoint::testnet().url, account_id.clone())
         .with_storage()
         .initial_balance(NearToken::from_near(666))
         .send()

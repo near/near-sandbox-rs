@@ -495,7 +495,7 @@ pub enum StateRecord {
 #[cfg(test)]
 mod tests {
     use crate::{FetchData, Sandbox};
-    use near_api::{Account, AccountId, Contract, NearToken, NetworkConfig};
+    use near_api::{Account, AccountId, Contract, NearToken, NetworkConfig, RPCEndpoint};
 
     #[tokio::test]
     async fn test_patch_state() {
@@ -566,12 +566,9 @@ mod tests {
             NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
         let account_id: AccountId = "race-of-sloths.testnet".parse().unwrap();
 
-        let rpc = NetworkConfig::testnet();
-        let rpc = rpc.rpc_endpoints.first().unwrap().url.clone();
-
         sandbox
             .patch_state(account_id.clone())
-            .fetch_from(rpc, FetchData::ALL)
+            .fetch_from(RPCEndpoint::testnet().url, FetchData::ALL)
             .await
             .unwrap()
             .initial_balance(NearToken::from_near(666))
