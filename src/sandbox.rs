@@ -11,6 +11,7 @@ use tracing::info;
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, TcpError};
 use crate::runner::{init_with_version, run_with_options_with_version};
+use crate::LATEST_SANDBOX_VERSION;
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
@@ -110,9 +111,18 @@ impl Sandbox {
     /// # }
     /// ```
     pub async fn start_sandbox() -> Result<Self, SandboxError> {
+        eprintln!(
+            r#"
+⚠️  WARNING: Using auto-fetched nearcore version: {}
+⚠️  This version updates automatically and may cause CI failures due to breaking changes.
+⚠️  For production/CI use, we strongly recommend locking to a specific version:
+   Sandbox::start_sandbox_with_version("{}")
+"#,
+            LATEST_SANDBOX_VERSION, LATEST_SANDBOX_VERSION
+        );
         Self::start_sandbox_with_config_and_version(
             SandboxConfig::default(),
-            crate::DEFAULT_NEAR_SANDBOX_VERSION,
+            LATEST_SANDBOX_VERSION,
         )
         .await
     }
@@ -170,8 +180,16 @@ impl Sandbox {
     /// # }
     /// ```
     pub async fn start_sandbox_with_config(config: SandboxConfig) -> Result<Self, SandboxError> {
-        Self::start_sandbox_with_config_and_version(config, crate::DEFAULT_NEAR_SANDBOX_VERSION)
-            .await
+        eprintln!(
+            r#"
+⚠️  WARNING: Using auto-fetched nearcore version: {}
+⚠️  This version updates automatically and may cause CI failures due to breaking changes.
+⚠️  For production/CI use, we strongly recommend locking to a specific version:
+   Sandbox::start_sandbox_with_config_and_version(config, "{}")
+"#,
+            LATEST_SANDBOX_VERSION, LATEST_SANDBOX_VERSION
+        );
+        Self::start_sandbox_with_config_and_version(config, LATEST_SANDBOX_VERSION).await
     }
 
     /// Start a new sandbox with a custom configuration and specific near-sandbox-utils version.
