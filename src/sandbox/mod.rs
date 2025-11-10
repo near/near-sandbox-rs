@@ -4,6 +4,7 @@ use std::{fs::File, net::Ipv4Addr};
 
 use fs4::FileExt;
 use near_account_id::AccountId;
+use reqwest::IntoUrl;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
@@ -323,11 +324,11 @@ impl Sandbox {
     /// # Ok(())
     /// # }
     /// ```
-    pub const fn import_account<'a, 'b>(
-        &'a self,
-        from_rpc: &'b str,
+    pub const fn import_account(
+        &self,
+        from_rpc: impl IntoUrl,
         account_id: AccountId,
-    ) -> AccountImport<'a, 'b> {
+    ) -> AccountImport<'_, impl IntoUrl> {
         AccountImport::new(account_id, from_rpc, self)
     }
 
@@ -360,7 +361,7 @@ impl Sandbox {
 
     async fn send_request(
         &self,
-        rpc: &str,
+        rpc: impl IntoUrl,
         json_body: serde_json::Value,
     ) -> Result<serde_json::Value, SandboxRpcError> {
         let result = self.client.post(rpc).json(&json_body).send().await?;

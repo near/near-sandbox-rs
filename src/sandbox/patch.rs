@@ -1,5 +1,6 @@
 use near_account_id::AccountId;
 use near_token::NearToken;
+use reqwest::{IntoUrl, Url};
 use serde::Serialize;
 
 use crate::{config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY, error_kind::SandboxRpcError, Sandbox};
@@ -85,7 +86,7 @@ impl<'a> PatchState<'a> {
     /// Fetch data from an RPC endpoint using the FetchData builder
     pub async fn fetch_from(
         self,
-        rpc: &str,
+        rpc: impl IntoUrl,
         fetch_data: FetchData,
     ) -> Result<Self, SandboxRpcError> {
         let account_id = self.destination_account.clone();
@@ -95,17 +96,18 @@ impl<'a> PatchState<'a> {
     pub async fn fetch_from_account(
         mut self,
         account_id: &AccountId,
-        rpc: &str,
+        rpc: impl IntoUrl,
         fetch_data: FetchData,
     ) -> Result<Self, SandboxRpcError> {
+        let rpc = rpc.into_url()?;
         if fetch_data.fetch_account {
-            self = self.fetch_account(account_id, rpc).await?;
+            self = self.fetch_account(account_id, rpc.clone()).await?;
         }
         if fetch_data.fetch_code {
-            self = self.fetch_code(account_id, rpc).await?;
+            self = self.fetch_code(account_id, rpc.clone()).await?;
         }
         if fetch_data.fetch_storage {
-            self = self.fetch_storage(account_id, rpc).await?;
+            self = self.fetch_storage(account_id, rpc.clone()).await?;
         }
         if fetch_data.fetch_access_keys {
             self = self.fetch_access_keys(account_id, rpc).await?;
@@ -300,7 +302,7 @@ impl<'a> PatchState<'a> {
     async fn fetch_account(
         self,
         account_id: &AccountId,
-        from_rpc: &str,
+        from_rpc: Url,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
         let account = self
             .sandbox
@@ -329,7 +331,7 @@ impl<'a> PatchState<'a> {
     async fn fetch_storage(
         self,
         account_id: &AccountId,
-        from_rpc: &str,
+        from_rpc: Url,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
         let storage = self
             .sandbox
@@ -372,7 +374,7 @@ impl<'a> PatchState<'a> {
     async fn fetch_code(
         self,
         account_id: &AccountId,
-        from_rpc: &str,
+        from_rpc: Url,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
         let code_response = self
             .sandbox
@@ -406,7 +408,7 @@ impl<'a> PatchState<'a> {
     async fn fetch_access_keys(
         mut self,
         account_id: &AccountId,
-        from_rpc: &str,
+        from_rpc: Url,
     ) -> Result<PatchState<'a>, SandboxRpcError> {
         let access_keys = self
             .sandbox
@@ -565,7 +567,7 @@ mod tests {
         let account_id: AccountId = "race-of-sloths.testnet".parse().unwrap();
 
         let rpc = NetworkConfig::testnet();
-        let rpc = rpc.rpc_endpoints.first().unwrap().url.as_ref();
+        let rpc = rpc.rpc_endpoints.first().unwrap().url.clone();
 
         sandbox
             .patch_state(account_id.clone())

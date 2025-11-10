@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let account_id: near_api::AccountId = "race-of-sloths.testnet".parse().unwrap();
 
     let rpc = NetworkConfig::testnet();
-    let rpc = rpc.rpc_endpoints.first().unwrap().url.as_ref();
+    let rpc = rpc.rpc_endpoints.first().unwrap().url.clone();
 
     sandbox
         .import_account(rpc, account_id.clone())
