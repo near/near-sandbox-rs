@@ -4,7 +4,6 @@ use std::{fs::File, net::Ipv4Addr};
 
 use fs4::FileExt;
 use near_account_id::AccountId;
-use reqwest::IntoUrl;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
@@ -98,7 +97,6 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
-    client: reqwest::Client,
 }
 
 impl Sandbox {
@@ -253,7 +251,6 @@ impl Sandbox {
             rpc_port_lock,
             net_port_lock,
             process: child,
-            client: reqwest::Client::new(),
         })
     }
 
@@ -276,9 +273,15 @@ impl Sandbox {
         });
 
         let mut interval = tokio::time::interval(Duration::from_millis(500));
+        let status_url = format!("{rpc}/status");
         for _ in 0..timeout_secs * 2 {
             interval.tick().await;
-            let response = reqwest::get(format!("{rpc}/status")).await;
+            let url = status_url.clone();
+            let response = tokio::task::spawn_blocking(move || ureq::get(&url).call())
+                .await
+                .map_err(|e| {
+                    SandboxError::RuntimeError(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
             if response.is_ok() {
                 return Ok(());
             }
@@ -286,7 +289,30 @@ impl Sandbox {
         Err(SandboxError::TimeoutError)
     }
 
+    async fn get_block_height(&self) -> Result<u64, SandboxRpcError> {
+        let response = self
+            .send_request(
+                &self.rpc_addr,
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": "0",
+                    "method": "status",
+                }),
+            )
+            .await?;
+
+        response
+            .get("result")
+            .and_then(|r| r.get("sync_info"))
+            .and_then(|s| s.get("latest_block_height"))
+            .and_then(|h| h.as_u64())
+            .ok_or(SandboxRpcError::UnexpectedResponse)
+    }
+
     pub async fn fast_forward(&self, blocks: u64) -> Result<(), SandboxRpcError> {
+        let initial_height = self.get_block_height().await?;
+        let target_height = initial_height + blocks;
+
         self.send_request(
             &self.rpc_addr,
             serde_json::json!({
@@ -299,7 +325,28 @@ impl Sandbox {
             }),
         )
         .await?;
-        Ok(())
+
+        // Poll until blocks are produced (30 second timeout)
+        let timeout = Duration::from_secs(30);
+        let start = std::time::Instant::now();
+        let mut interval = tokio::time::interval(Duration::from_millis(100));
+
+        loop {
+            interval.tick().await;
+
+            if start.elapsed() > timeout {
+                return Err(SandboxRpcError::SandboxRpcError(format!(
+                    "fast_forward timeout: expected height {} but current height is {}",
+                    target_height,
+                    self.get_block_height().await.unwrap_or(0)
+                )));
+            }
+
+            match self.get_block_height().await {
+                Ok(height) if height >= target_height => return Ok(()),
+                _ => continue,
+            }
+        }
     }
 
     pub const fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
@@ -324,12 +371,12 @@ impl Sandbox {
     /// # Ok(())
     /// # }
     /// ```
-    pub const fn import_account(
+    pub fn import_account(
         &self,
-        from_rpc: impl IntoUrl,
+        from_rpc: impl AsRef<str>,
         account_id: AccountId,
-    ) -> AccountImport<'_, impl IntoUrl> {
-        AccountImport::new(account_id, from_rpc, self)
+    ) -> AccountImport<'_> {
+        AccountImport::new(account_id, from_rpc.as_ref().to_string(), self)
     }
 
     /// Creates a new account in the sandbox. By default, the account will have [crate::config::DEFAULT_GENESIS_ACCOUNT_BALANCE]
@@ -361,12 +408,25 @@ impl Sandbox {
 
     async fn send_request(
         &self,
-        rpc: impl IntoUrl,
+        rpc: impl AsRef<str>,
         json_body: serde_json::Value,
     ) -> Result<serde_json::Value, SandboxRpcError> {
-        let result = self.client.post(rpc).json(&json_body).send().await?;
+        let url = rpc.as_ref().to_string();
+        let body_json = json_body.clone();
 
-        let body = result.json::<serde_json::Value>().await?;
+        let response = tokio::task::spawn_blocking(move || {
+            ureq::post(&url)
+                .set("Content-Type", "application/json")
+                .send_json(&body_json)
+        })
+        .await
+        .map_err(|e| {
+            // Convert JoinError to ureq::Error via io::Error
+            let io_err = std::io::Error::new(std::io::ErrorKind::Other, e.to_string());
+            ureq::Error::from(io_err)
+        })??;
+
+        let body: serde_json::Value = response.into_json().map_err(|e| ureq::Error::from(e))?;
 
         if let Some(error) = body.get("error") {
             return Err(SandboxRpcError::SandboxRpcError(error.to_string()));

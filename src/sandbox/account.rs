@@ -1,6 +1,5 @@
 use near_account_id::AccountId;
 use near_token::NearToken;
-use reqwest::IntoUrl;
 
 use crate::{config::DEFAULT_ACCOUNT_FOR_CLONING, error_kind::SandboxRpcError, FetchData, Sandbox};
 
@@ -65,18 +64,18 @@ impl<'a> AccountCreation<'a> {
 }
 
 #[derive(Clone)]
-pub struct AccountImport<'a, T: IntoUrl> {
+pub struct AccountImport<'a> {
     pub account_id: AccountId,
     pub sandbox: &'a Sandbox,
-    pub from_rpc: T,
+    pub from_rpc: String,
 
     pub fetch_data: FetchData,
     pub initial_balance: Option<NearToken>,
     pub public_key: Option<String>,
 }
 
-impl<'a, T: IntoUrl> AccountImport<'a, T> {
-    pub const fn new(account_id: AccountId, from_rpc: T, sandbox: &'a Sandbox) -> Self {
+impl<'a> AccountImport<'a> {
+    pub fn new(account_id: AccountId, from_rpc: String, sandbox: &'a Sandbox) -> Self {
         Self {
             account_id,
             sandbox,

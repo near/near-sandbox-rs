@@ -34,7 +34,7 @@ pub enum SandboxError {
 #[derive(thiserror::Error, Debug)]
 pub enum SandboxRpcError {
     #[error("Request error: {0}")]
-    RequestError(#[from] reqwest::Error),
+    RequestError(#[from] ureq::Error),
 
     #[error("Unexpected response from the RPC")]
     UnexpectedResponse,
