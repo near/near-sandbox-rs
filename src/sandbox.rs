@@ -4,7 +4,8 @@ use std::{fs::File, net::Ipv4Addr};
 
 use fs4::FileExt;
 use tempfile::TempDir;
-use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
 use tracing::info;
 
@@ -271,12 +272,41 @@ impl Sandbox {
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         for _ in 0..timeout_secs * 2 {
             interval.tick().await;
-            let response = reqwest::get(format!("{rpc}/status")).await;
-            if response.is_ok() {
+            if sandbox_responds(rpc).await {
                 return Ok(());
             }
         }
         Err(SandboxError::TimeoutError)
+    }
+}
+
+async fn sandbox_responds(rpc: &str) -> bool {
+    let address = rpc.strip_prefix("http://").unwrap_or(rpc);
+    let mut stream = match TcpStream::connect(address).await {
+        Ok(stream) => stream,
+        Err(_) => return false,
+    };
+
+    let request = format!(
+        "GET /status HTTP/1.1\r\nHost: {address}\r\nUser-Agent: near-sandbox\r\nConnection: close\r\n\r\n"
+    );
+
+    if stream.write_all(request.as_bytes()).await.is_err() {
+        return false;
+    }
+
+    if stream.shutdown().await.is_err() {
+        return false;
+    }
+
+    let mut buffer = [0u8; 64];
+    match stream.read(&mut buffer).await {
+        Ok(bytes_read) if bytes_read > 0 => buffer
+            .split(|&b| b == b'\n' || b == b'\r')
+            .find(|line| !line.is_empty())
+            .map(|line| line.starts_with(b"HTTP/"))
+            .unwrap_or(false),
+        _ => false,
     }
 }
 
