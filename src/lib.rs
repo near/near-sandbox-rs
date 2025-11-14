@@ -6,6 +6,7 @@ mod runner;
 
 // Re-export important types for better user experience
 pub use config::{GenesisAccount, SandboxConfig};
+pub use sandbox::patch::FetchData;
 pub use sandbox::Sandbox;
 
 // The current version of the sandbox node we want to point to.

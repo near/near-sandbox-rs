@@ -32,6 +32,18 @@ pub enum SandboxError {
 }
 
 #[derive(thiserror::Error, Debug)]
+pub enum SandboxRpcError {
+    #[error("Request error: {0}")]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Unexpected response from the RPC")]
+    UnexpectedResponse,
+
+    #[error("Sandbox RPC error: {0}")]
+    SandboxRpcError(String),
+}
+
+#[derive(thiserror::Error, Debug)]
 pub enum TcpError {
     #[error("Error while binding listener to a port {0}: {1}")]
     BindError(u16, std::io::Error),

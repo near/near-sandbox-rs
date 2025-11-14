@@ -23,6 +23,10 @@ use serde_json::Value;
 
 use crate::error_kind::SandboxConfigError;
 
+/// Users won't get access to this account without patching
+///
+/// We will use this account for copying account during creation of a new account
+pub(crate) const DEFAULT_ACCOUNT_FOR_CLONING: &AccountIdRef = AccountIdRef::new_or_panic("clone");
 pub const DEFAULT_GENESIS_ACCOUNT: &AccountIdRef = AccountIdRef::new_or_panic("sandbox");
 pub const DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY: &str = "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB";
 pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
@@ -151,7 +155,7 @@ impl GenesisAccount {
 
 impl Default for GenesisAccount {
     fn default() -> Self {
-        GenesisAccount {
+        Self {
             account_id: DEFAULT_GENESIS_ACCOUNT.into(),
             public_key: DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY.to_string(),
             private_key: DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.to_string(),
@@ -274,7 +278,10 @@ fn overwrite_genesis(
     )
     .unwrap_or_default();
 
-    let mut accounts_to_add = vec![GenesisAccount::default()];
+    let mut accounts_to_add = vec![
+        GenesisAccount::default(),
+        GenesisAccount::default_with_name(DEFAULT_ACCOUNT_FOR_CLONING.to_owned()),
+    ];
 
     accounts_to_add.extend(config.additional_accounts.clone());
 

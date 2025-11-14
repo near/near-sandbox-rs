@@ -1,15 +1,11 @@
-use near_api::{signer, Account, AccountId, NearToken, NetworkConfig, RPCEndpoint, Signer, Tokens};
+use near_api::{signer, Account, AccountId, NearToken, NetworkConfig, Signer, Tokens};
 use near_sandbox::{GenesisAccount, Sandbox};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let sandbox = Sandbox::start_sandbox().await.unwrap();
-    let network_config = NetworkConfig {
-        network_name: "sandbox".to_string(),
-        rpc_endpoints: vec![RPCEndpoint::new(sandbox.rpc_addr.parse().unwrap())],
-        ..NetworkConfig::testnet()
-    };
+    let network_config = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
 
     let genesis_account_default = GenesisAccount::default();
     let genesis_account_id: AccountId = genesis_account_default.account_id;
@@ -28,7 +24,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_signer(genesis_signer.clone())
         .send_to(&network_config)
         .await
-        .unwrap();
+        .unwrap()
+        .assert_success();
 
     Tokens::account(genesis_account_id.clone())
         .send_to(new_account_id.clone())
@@ -36,7 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_signer(genesis_signer)
         .send_to(&network_config)
         .await
-        .unwrap();
+        .unwrap()
+        .assert_success();
 
     let genesis_account_balance = Tokens::account(genesis_account_id.clone())
         .near_balance()

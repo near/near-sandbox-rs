@@ -3,14 +3,21 @@ use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
 
 use fs4::FileExt;
+use near_account_id::AccountId;
+use reqwest::IntoUrl;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
 use tracing::info;
 
 use crate::config::{self, SandboxConfig};
-use crate::error_kind::{SandboxError, TcpError};
+use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
 use crate::runner::{init_with_version, run_with_options_with_version};
+use crate::sandbox::account::{AccountCreation, AccountImport};
+use crate::sandbox::patch::PatchState;
+
+pub mod account;
+pub mod patch;
 
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
@@ -91,6 +98,7 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
+    client: reqwest::Client,
 }
 
 impl Sandbox {
@@ -245,6 +253,7 @@ impl Sandbox {
             rpc_port_lock,
             net_port_lock,
             process: child,
+            client: reqwest::Client::new(),
         })
     }
 
@@ -261,12 +270,10 @@ impl Sandbox {
     }
 
     async fn wait_until_ready(rpc: &str) -> Result<(), SandboxError> {
-        let timeout_secs = match std::env::var("NEAR_RPC_TIMEOUT_SECS") {
-            Ok(secs) => secs
-                .parse::<u64>()
-                .expect("Failed to parse NEAR_RPC_TIMEOUT_SECS"),
-            Err(_) => 10,
-        };
+        let timeout_secs = std::env::var("NEAR_RPC_TIMEOUT_SECS").map_or(10, |secs| {
+            secs.parse::<u64>()
+                .expect("Failed to parse NEAR_RPC_TIMEOUT_SECS")
+        });
 
         let mut interval = tokio::time::interval(Duration::from_millis(500));
         for _ in 0..timeout_secs * 2 {
@@ -277,6 +284,95 @@ impl Sandbox {
             }
         }
         Err(SandboxError::TimeoutError)
+    }
+
+    pub async fn fast_forward(&self, blocks: u64) -> Result<(), SandboxRpcError> {
+        self.send_request(
+            &self.rpc_addr,
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "0",
+                "method": "sandbox_fast_forward",
+                "params": {
+                    "delta_height": blocks,
+                },
+            }),
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub const fn patch_state(&self, account_id: AccountId) -> PatchState<'_> {
+        PatchState::new(account_id, self)
+    }
+
+    /// Helper function to simplify importing an account from an RPC endpoint
+    /// into the sandbox. By default, the account will add [crate::config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY] as the full access public key.
+    ///
+    /// # Arguments
+    /// * `account_id` - the account id to import
+    /// * `from_rpc` - the RPC endpoint to fetch the account from
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use near_sandbox::*;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let sandbox = Sandbox::start_sandbox().await?;
+    /// let account_id = "user.testnet".parse()?;
+    /// sandbox.import_account("https://rpc.testnet.near.org", account_id).send().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const fn import_account(
+        &self,
+        from_rpc: impl IntoUrl,
+        account_id: AccountId,
+    ) -> AccountImport<'_, impl IntoUrl> {
+        AccountImport::new(account_id, from_rpc, self)
+    }
+
+    /// Creates a new account in the sandbox. By default, the account will have [crate::config::DEFAULT_GENESIS_ACCOUNT_BALANCE]
+    /// and will have [crate::config::DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY] as the full access private key.
+    ///
+    /// # Arguments
+    /// * `account_id` - the account id to create
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use near_sandbox::*;
+    /// use near_token::NearToken;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let sandbox = Sandbox::start_sandbox().await?;
+    /// let account_id = "user.testnet".parse()?;
+    /// sandbox.create_account(account_id)
+    ///     .initial_balance(NearToken::from_near(1))
+    ///     .public_key("ed25519:...".to_string())
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const fn create_account(&self, account_id: AccountId) -> AccountCreation<'_> {
+        AccountCreation::new(account_id, self)
+    }
+
+    async fn send_request(
+        &self,
+        rpc: impl IntoUrl,
+        json_body: serde_json::Value,
+    ) -> Result<serde_json::Value, SandboxRpcError> {
+        let result = self.client.post(rpc).json(&json_body).send().await?;
+
+        let body = result.json::<serde_json::Value>().await?;
+
+        if let Some(error) = body.get("error") {
+            return Err(SandboxRpcError::SandboxRpcError(error.to_string()));
+        }
+
+        Ok(body)
     }
 }
 
@@ -312,5 +408,36 @@ fn suppress_sandbox_logs_if_required() {
     // As the worst case scenario is that the logs are not suppressed, which is not a big deal.
     unsafe {
         std::env::set_var("NEAR_SANDBOX_LOG", "near=error,stats=error,network=error");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_fast_forward() {
+        let sandbox = Sandbox::start_sandbox().await.unwrap();
+        let network =
+            near_api::NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
+
+        let height = near_api::Chain::block_number()
+            .fetch_from(&network)
+            .await
+            .unwrap();
+
+        sandbox.fast_forward(1000).await.unwrap();
+
+        let new_height = near_api::Chain::block_number()
+            .fetch_from(&network)
+            .await
+            .unwrap();
+
+        assert!(
+            new_height >= height + 1000,
+            "expected new height({}) to be at least 1000 blocks higher than the original height({})",
+            new_height,
+            height
+        );
     }
 }

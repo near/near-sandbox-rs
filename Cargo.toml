@@ -20,7 +20,7 @@ json-patch = "4.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
-reqwest = { version = "0.12.20", default-features = false }
+reqwest = { version = "0.12.20", default-features = false, features = ["json"] }
 
 near-account-id = { version = "1", features = ["serde"] }
 near-token = { version = "0.3", features = ["serde"] }
@@ -36,7 +36,7 @@ bs58 = { version = "0.5.0", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-near-api = "0.6.1"
+near-api = "0.7"
 
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
