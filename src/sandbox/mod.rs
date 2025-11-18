@@ -280,7 +280,7 @@ impl Sandbox {
             let response = tokio::task::spawn_blocking(move || ureq::get(&url).call())
                 .await
                 .map_err(|e| {
-                    SandboxError::RuntimeError(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    SandboxError::RuntimeError(std::io::Error::other(e))
                 })?;
             if response.is_ok() {
                 return Ok(());
@@ -422,11 +422,11 @@ impl Sandbox {
         .await
         .map_err(|e| {
             // Convert JoinError to ureq::Error via io::Error
-            let io_err = std::io::Error::new(std::io::ErrorKind::Other, e.to_string());
+            let io_err = std::io::Error::other(e.to_string());
             ureq::Error::from(io_err)
         })??;
 
-        let body: serde_json::Value = response.into_json().map_err(|e| ureq::Error::from(e))?;
+        let body: serde_json::Value = response.into_json().map_err(ureq::Error::from)?;
 
         if let Some(error) = body.get("error") {
             return Err(SandboxRpcError::SandboxRpcError(error.to_string()));

@@ -75,7 +75,7 @@ pub struct AccountImport<'a> {
 }
 
 impl<'a> AccountImport<'a> {
-    pub fn new(account_id: AccountId, from_rpc: String, sandbox: &'a Sandbox) -> Self {
+    pub const fn new(account_id: AccountId, from_rpc: String, sandbox: &'a Sandbox) -> Self {
         Self {
             account_id,
             sandbox,

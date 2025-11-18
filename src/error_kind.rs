@@ -34,13 +34,19 @@ pub enum SandboxError {
 #[derive(thiserror::Error, Debug)]
 pub enum SandboxRpcError {
     #[error("Request error: {0}")]
-    RequestError(#[from] ureq::Error),
+    RequestError(#[from] Box<ureq::Error>),
 
     #[error("Unexpected response from the RPC")]
     UnexpectedResponse,
 
     #[error("Sandbox RPC error: {0}")]
     SandboxRpcError(String),
+}
+
+impl From<ureq::Error> for SandboxRpcError {
+    fn from(error: ureq::Error) -> Self {
+        Self::RequestError(Box::new(error))
+    }
 }
 
 #[derive(thiserror::Error, Debug)]
