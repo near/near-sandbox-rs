@@ -9,19 +9,25 @@ Library for launching NEAR sandbox environments.
 """
 
 [dependencies]
-thiserror = "2"
-tokio = { version = "1", features = ["process", "net"] }
+thiserror = { version = "2", default-features = false, features = ["std"] }
+tokio = { version = "1", default-features = false, features = [
+    "rt",
+    "time",
+    "process",
+    "net",
+] }
 binary-install = "0.4"
-fs4 = "0.6"
+ureq = { version = "2", default-features = false, features = ["json"] }
+fs4 = { version = "0.6", default-features = false, features = ["sync"] }
 dirs-next = { version = "2", optional = true }
 
-tempfile = "3.19"
-json-patch = "4.0"
-serde_json = "1.0"
+tempfile = { version = "3.19", default-features = false, features = [
+    "getrandom",
+] }
+json-patch = { version = "4.0", default-features = false }
+serde_json = { version = "1.0", default-features = false, features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
-tracing = "0.1"
-reqwest = { version = "0.12.20", default-features = false, features = ["json"] }
-
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 near-account-id = { version = "1", features = ["serde"] }
 near-token = { version = "0.3", features = ["serde"] }
 
@@ -35,7 +41,10 @@ ed25519-dalek = { version = "2.2.0", default-features = false, features = [
 bs58 = { version = "0.5.0", optional = true }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+] }
 near-api = "0.7"
 
 [features]
