@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2](https://github.com/near/near-sandbox-rs/compare/v0.2.1...v0.2.2) - 2025-11-18
+
+### Added
+
+- introduced sandbox rpc calls for state-patching and network fast forwarding ([#18](https://github.com/near/near-sandbox-rs/pull/18))
+
+### Other
+
+- remove reqwest and disable default features ([#29](https://github.com/near/near-sandbox-rs/pull/29))
+- Update nearcore version to 2.9.0 ([#20](https://github.com/near/near-sandbox-rs/pull/20))
+
 ## [0.2.1](https://github.com/near/near-sandbox-rs/compare/v0.2.0...v0.2.1) - 2025-10-27
 
 ### Fixed
