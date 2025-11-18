@@ -279,9 +279,7 @@ impl Sandbox {
             let url = status_url.clone();
             let response = tokio::task::spawn_blocking(move || ureq::get(&url).call())
                 .await
-                .map_err(|e| {
-                    SandboxError::RuntimeError(std::io::Error::other(e))
-                })?;
+                .map_err(|e| SandboxError::RuntimeError(std::io::Error::other(e)))?;
             if response.is_ok() {
                 return Ok(());
             }
