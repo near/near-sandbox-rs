@@ -35,6 +35,9 @@ const fn platform() -> Option<&'static str> {
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     return Some("Linux-x86_64");
 
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    return Some("Linux-aarch64");
+
     // Darwin-x86_64 is not supported for some time now.
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
     return None;
@@ -44,7 +47,8 @@ const fn platform() -> Option<&'static str> {
 
     #[cfg(all(
         not(target_os = "macos"),
-        not(all(target_os = "linux", target_arch = "x86_64"))
+        not(all(target_os = "linux", target_arch = "x86_64")),
+        not(all(target_os = "linux", target_arch = "aarch64"))
     ))]
     return None;
 }
