@@ -53,6 +53,12 @@ const fn platform() -> Option<&'static str> {
     return None;
 }
 
+/// Installs sandbox node with the default version. This is a version that is usually stable
+/// and has landed into mainnet to reflect the latest stable features and fixes.
+pub fn install() -> Result<PathBuf, SandboxError> {
+    ensure_sandbox_bin_with_version(crate::DEFAULT_NEAR_SANDBOX_VERSION)
+}
+
 // if the `SANDBOX_ARTIFACT_URL` env var is set, we short-circuit and use that.
 fn bin_url(version: &str) -> Option<String> {
     if let Ok(val) = std::env::var("SANDBOX_ARTIFACT_URL") {
