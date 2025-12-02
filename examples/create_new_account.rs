@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .expect_err("User account should not exist");
 
     sandbox
-        .create_account(user.clone())
+        .create_account(user.as_str().parse().unwrap())
         .initial_balance(NearToken::from_near(1))
         .send()
         .await?;

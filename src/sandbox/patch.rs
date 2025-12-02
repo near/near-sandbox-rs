@@ -523,7 +523,7 @@ mod tests {
             .data;
 
         sandbox
-            .patch_state(account_id.clone())
+            .patch_state(account_id.as_str().parse().unwrap())
             .account(account_data.clone())
             .code(code.code_base64)
             .storage_entries(state.values.into_iter().map(|s| (s.key.0, s.value.0)))
@@ -566,7 +566,7 @@ mod tests {
         let account_id: AccountId = "race-of-sloths.testnet".parse().unwrap();
 
         sandbox
-            .patch_state(account_id.clone())
+            .patch_state(account_id.as_str().parse().unwrap())
             .fetch_from(RPCEndpoint::testnet().url, FetchData::ALL)
             .await
             .unwrap()
