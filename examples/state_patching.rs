@@ -13,7 +13,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let account_id: near_api::AccountId = "race-of-sloths.testnet".parse().unwrap();
 
     sandbox
-        .import_account(RPCEndpoint::testnet().url, account_id.clone())
+        .import_account(
+            RPCEndpoint::testnet().url,
+            account_id.as_str().parse().unwrap(),
+        )
         .with_storage()
         .initial_balance(NearToken::from_near(666))
         .send()
@@ -22,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Can be signed with default access key
     near_api::Tokens::account(account_id.clone())
-        .send_to(DEFAULT_GENESIS_ACCOUNT.to_owned())
+        .send_to(DEFAULT_GENESIS_ACCOUNT.as_str().parse().unwrap())
         .near(NearToken::from_near(1))
         .with_signer(
             Signer::new(Signer::from_secret_key(

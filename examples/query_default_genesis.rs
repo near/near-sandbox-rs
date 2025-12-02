@@ -9,7 +9,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let sandbox = Sandbox::start_sandbox().await.unwrap();
     let network = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
 
-    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.into();
+    let genesis_account: AccountId = DEFAULT_GENESIS_ACCOUNT.as_str().parse().unwrap();
 
     let genesis_account_amount = Account(genesis_account.clone())
         .view()

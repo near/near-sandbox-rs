@@ -8,7 +8,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let network_config = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
 
     let genesis_account_default = GenesisAccount::default();
-    let genesis_account_id: AccountId = genesis_account_default.account_id;
+    let genesis_account_id: AccountId =
+        genesis_account_default.account_id.as_str().parse().unwrap();
     let genesis_signer: Arc<Signer> = Signer::new(Signer::from_secret_key(
         genesis_account_default.private_key.parse().unwrap(),
     ))
