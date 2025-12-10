@@ -5,7 +5,14 @@ use tokio::process::{Child, Command};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use crate::error_kind::SandboxError;
+use crate::error_kind::{SandboxError, TcpError};
+
+// Must be an IP address as `neard` expects socket address for network address.
+const DEFAULT_RPC_HOST: &str = "127.0.0.1";
+
+pub fn rpc_socket(port: u16) -> String {
+    format!("{DEFAULT_RPC_HOST}:{port}")
+}
 
 /// Initialize a sandbox node with the provided version and home directory.
 pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Child, SandboxError> {
@@ -18,12 +25,48 @@ pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Ch
         .map_err(SandboxError::RuntimeError)
 }
 
-/// Run sandbox with options and version
-pub fn run_with_options_with_version(
-    options: &[&str],
+/// Spawn neard process with port reservation guards
+///
+/// The TcpListeners are held until immediately before spawning to prevent
+/// port reallocation by the OS. They are dropped just before Command::spawn()
+/// to minimize the race window where another process could claim the ports.
+pub fn run_neard_with_port_guards(
+    home_dir: &Path,
     version: &str,
+    rpc_listener_guard: tokio::net::TcpListener,
+    net_listener_guard: tokio::net::TcpListener,
 ) -> Result<Child, SandboxError> {
     let bin_path = ensure_sandbox_bin_with_version(version)?;
+
+    let rpc_addr = rpc_socket(
+        rpc_listener_guard
+            .local_addr()
+            .map_err(TcpError::LocalAddrError)?
+            .port(),
+    );
+
+    let net_addr = rpc_socket(
+        net_listener_guard
+            .local_addr()
+            .map_err(TcpError::LocalAddrError)?
+            .port(),
+    );
+
+    let options = &[
+        "--home",
+        home_dir.to_str().expect("home_dir is valid utf8"),
+        "run",
+        "--rpc-addr",
+        &rpc_addr,
+        "--network-addr",
+        &net_addr,
+    ];
+
+    // NOTE: Droping listeners in order to enable usage of ports for neard
+    // not the best solution, but at least lowers the window for possible race condition
+    drop(rpc_listener_guard);
+    drop(net_listener_guard);
+
     Command::new(&bin_path)
         .args(options)
         .envs(log_vars())

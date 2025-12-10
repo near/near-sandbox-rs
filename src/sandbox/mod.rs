@@ -11,57 +11,52 @@ use tracing::info;
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
-use crate::runner::{init_with_version, run_with_options_with_version};
+use crate::runner::{init_with_version, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
 
 pub mod account;
 pub mod patch;
 
-// Must be an IP address as `neard` expects socket address for network address.
-const DEFAULT_RPC_HOST: &str = "127.0.0.1";
-
-fn rpc_socket(port: u16) -> String {
-    format!("{DEFAULT_RPC_HOST}:{port}")
-}
-
-/// Request an unused port from the OS.
-async fn pick_unused_port() -> Result<u16, SandboxError> {
+/// Request an unused port and owned binded TcpListener from the OS.
+async fn pick_unused_port_locked() -> Result<TcpListener, SandboxError> {
     // Port 0 means the OS gives us an unused port
     // Important to use localhost as using 0.0.0.0 leads to users getting brief firewall popups to
     // allow inbound connections on MacOS.
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
-    let listener = TcpListener::bind(addr)
+    let listener_port_guard = TcpListener::bind(addr)
         .await
         .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    let port = listener
-        .local_addr()
-        .map_err(TcpError::LocalAddrError)?
-        .port();
-    Ok(port)
+    Ok(listener_port_guard)
 }
 
-/// Acquire an unused port and lock it for the duration until the sandbox server has
+/// Acquire an unused port with binded TcpListener, and lock it for the duration until the sandbox server has
 /// been started.
-async fn acquire_unused_port() -> Result<(u16, File), SandboxError> {
+async fn acquire_unused_port_and_sandbox_lock() -> Result<(TcpListener, File), SandboxError> {
     loop {
-        let port = pick_unused_port().await?;
-        let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{port}.lock"));
+        let listener_port_guard = pick_unused_port_locked().await?;
+        let lockpath = std::env::temp_dir().join(format!(
+            "near-sandbox-port{}.lock",
+            listener_port_guard
+                .local_addr()
+                .map_err(TcpError::LocalAddrError)?
+                .port()
+        ));
         let lockfile = File::create(lockpath).map_err(TcpError::LockingError)?;
         if lockfile.try_lock_exclusive().is_ok() {
-            break Ok((port, lockfile));
+            break Ok((listener_port_guard, lockfile));
         }
     }
 }
 
 /// Try to acquire a specific port and lock it.
 /// Returns the port and lock file if successful.
-async fn try_acquire_specific_port(port: u16) -> Result<(u16, File), SandboxError> {
+async fn try_acquire_specific_port(port: u16) -> Result<(TcpListener, File), SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
-    let listener = TcpListener::bind(addr)
+    let listener_port_guard = TcpListener::bind(addr)
         .await
         .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    let port = listener
+    let port = listener_port_guard
         .local_addr()
         .map_err(TcpError::LocalAddrError)?
         .port();
@@ -72,13 +67,15 @@ async fn try_acquire_specific_port(port: u16) -> Result<(u16, File), SandboxErro
         .try_lock_exclusive()
         .map_err(TcpError::LockingError)?;
 
-    Ok((port, lockfile))
+    Ok((listener_port_guard, lockfile))
 }
 
-async fn acquire_or_lock_port(configured_port: Option<u16>) -> Result<(u16, File), SandboxError> {
+async fn acquire_or_lock_port(
+    configured_port: Option<u16>,
+) -> Result<(TcpListener, File), SandboxError> {
     match configured_port {
         Some(port) => try_acquire_specific_port(port).await,
-        None => acquire_unused_port().await,
+        None => acquire_unused_port_and_sandbox_lock().await,
     }
 }
 
@@ -218,28 +215,27 @@ impl Sandbox {
         suppress_sandbox_logs_if_required();
         let home_dir = Self::init_home_dir_with_version(version).await?;
 
-        let (rpc_port, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
-        let (net_port, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
+        let (rpc_listener_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
+        let (net_listener_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
 
-        let rpc_addr = rpc_socket(rpc_port);
-        let net_addr = rpc_socket(net_port);
+        let rpc_addr = crate::runner::rpc_socket(
+            rpc_listener_guard
+                .local_addr()
+                .map_err(TcpError::LocalAddrError)?
+                .port(),
+        );
 
         config::set_sandbox_configs_with_config(&home_dir, &config)?;
         config::set_sandbox_genesis_with_config(&home_dir, &config)?;
 
-        let options = &[
-            "--home",
-            home_dir.path().to_str().expect("home_dir is valid utf8"),
-            "run",
-            "--rpc-addr",
-            &rpc_addr,
-            "--network-addr",
-            &net_addr,
-        ];
+        let child = run_neard_with_port_guards(
+            home_dir.path(),
+            version,
+            rpc_listener_guard,
+            net_listener_guard,
+        )?;
 
-        let child = run_with_options_with_version(options, version)?;
-
-        info!(target: "sandbox", "Started up sandbox at localhost:{} with pid={:?}", rpc_port, child.id());
+        info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
         let rpc_addr = format!("http://{rpc_addr}");
 
