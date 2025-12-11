@@ -1,6 +1,7 @@
 use binary_install::Cache;
 use fs4::FileExt;
 use tokio::process::{Child, Command};
+use tokio::time::{timeout, Duration};
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -247,4 +248,9 @@ fn log_vars() -> Vec<(String, String)> {
         vars.push(("RUST_LOG_STYLE".into(), val));
     }
     vars
+}
+
+pub async fn kill_and_wait_with_timeout(mut child: Child, dur: Duration) {
+    let _ = child.kill().await;
+    let _ = timeout(dur, child.wait()).await;
 }

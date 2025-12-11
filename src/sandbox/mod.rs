@@ -7,11 +7,11 @@ use near_account_id::AccountId;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
 use tokio::process::Child;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
-use crate::runner::{init_with_version, run_neard_with_port_guards};
+use crate::runner::{init_with_version, kill_and_wait_with_timeout, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
 
@@ -226,7 +226,9 @@ impl Sandbox {
             })
             .unwrap_or(5usize);
 
-        for attempt in 0..max_num_port_retries {
+        let max_num_port_retries = max_num_port_retries.max(1);
+
+        for attempt in 1..=max_num_port_retries {
             let (rpc_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
             let (net_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
 
@@ -264,16 +266,21 @@ impl Sandbox {
                     child.kill().await.expect("couldn't kill child");
                     continue;
                 }
+                Err(SandboxError::TimeoutError) => {
+                    error!(target: "sandbox", "Couldn't start sandbox after {} attempts", max_num_port_retries);
+                    kill_and_wait_with_timeout(child, tokio::time::Duration::from_secs(1)).await;
+                    return Err(SandboxError::SandboxStartupRetriesExhausted(
+                        max_num_port_retries,
+                    ));
+                }
                 Err(e) => {
-                    child.kill().await.expect("couldn't kill child");
+                    kill_and_wait_with_timeout(child, tokio::time::Duration::from_secs(1)).await;
                     return Err(e);
                 }
             }
         }
 
-        Err(SandboxError::SandboxStartupRetriesExhausted(
-            max_num_port_retries,
-        ))
+        unreachable!("We return Sandbox instance or error via previous loop. loop is ensured to have at least one run");
     }
 
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
@@ -519,5 +526,40 @@ mod tests {
             new_height,
             height
         );
+    }
+    #[cfg(feature = "stress_test")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 16)]
+    async fn test_multiple_sandboxes() {
+        const NUM_ROUNDS: usize = 5;
+        const NUM_HANDLES: usize = 32;
+
+        for round in 1..=NUM_ROUNDS {
+            println!("\n==== ROUND {} ====", round);
+
+            let handles = (1..=NUM_HANDLES)
+                .map(|i| {
+                    tokio::spawn(async move {
+                        match Sandbox::start_sandbox().await {
+                            Ok(s1) => {
+                                println!("+ Sandbox {} ({}) started successfully", i, s1.rpc_addr);
+                                tokio::time::sleep(Duration::from_millis(fastrand::u64(100..=500)))
+                                    .await;
+                                drop(s1);
+                            }
+                            Err(e) => {
+                                panic!("- Sandbox {} failed: {:?}", i, e);
+                            }
+                        }
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            let results = futures::future::join_all(handles).await;
+            for (i, r) in results.into_iter().enumerate() {
+                r.unwrap_or_else(|e| panic!("task {} panicked or was cancelled: {:?}", i + 1, e));
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
     }
 }

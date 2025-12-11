@@ -40,6 +40,9 @@ ed25519-dalek = { version = "2.2.0", default-features = false, features = [
 ], optional = true }
 bs58 = { version = "0.5.0", optional = true }
 
+fastrand = { version = "2.3.0", default-features = false, optional = true }
+futures = { version = "0.3.31", default-features = false, optional = true }
+
 [dev-dependencies]
 tokio = { version = "1", default-features = false, features = [
     "macros",
@@ -50,3 +53,4 @@ near-api = "0.7"
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = ["dep:dirs-next"]
+stress_test = ["fastrand", "futures"]
