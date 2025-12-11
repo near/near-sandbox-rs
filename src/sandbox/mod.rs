@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
-use crate::runner::{init_with_version, kill_and_wait_with_timeout, run_neard_with_port_guards};
+use crate::runner::{init_with_version, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
 
@@ -52,10 +52,10 @@ async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError
 /// Returns the port and lock file if successful.
 async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File), SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
-    let port_guard = TcpListener::bind(addr)
+    let listener_port_guard = TcpListener::bind(addr)
         .await
         .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    let port = port_guard
+    let port = listener_port_guard
         .local_addr()
         .map_err(TcpError::LocalAddrError)?
         .port();
@@ -66,7 +66,7 @@ async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File
         .try_lock_exclusive()
         .map_err(TcpError::LockingError)?;
 
-    Ok((port_guard, lockfile))
+    Ok((listener_port_guard, lockfile))
 }
 
 async fn acquire_or_lock_port(
@@ -268,13 +268,13 @@ impl Sandbox {
                 }
                 Err(SandboxError::TimeoutError) => {
                     error!(target: "sandbox", "Couldn't start sandbox after {} attempts", max_num_port_retries);
-                    kill_and_wait_with_timeout(child, tokio::time::Duration::from_secs(1)).await;
+                    child.kill().await.expect("couldn't kill child");
                     return Err(SandboxError::SandboxStartupRetriesExhausted(
                         max_num_port_retries,
                     ));
                 }
                 Err(e) => {
-                    kill_and_wait_with_timeout(child, tokio::time::Duration::from_secs(1)).await;
+                    child.kill().await.expect("couldn't kill child");
                     return Err(e);
                 }
             }

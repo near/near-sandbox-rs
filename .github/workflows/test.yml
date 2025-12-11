@@ -27,18 +27,18 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D clippy::all
 
   examples:
-    needs: [clippy, cargo-fmt, cargo-doc]
+    needs: [clippy, cargo-fmt, cargo-doc, cargo-test]
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-    - name: Install libudev (Linux only)
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
-    - name: Run examples
-      run: |
-        cd examples
-        ./run_all.sh
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Install libudev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+      - name: Run examples
+        run: |
+          cd examples
+          ./run_all.sh
 
   cargo-fmt:
     runs-on: ubuntu-24.04
@@ -55,6 +55,13 @@ jobs:
       - name: Run cargo build
         run: cargo build --all-features
 
+  cargo-test:
+    runs-on: ubuntu-24.0.4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo test
+        run: cargo test --all-features
+
   # there're sometimes warnings, which signal, that the generated doc
   # won't look as expected, when rendered, and sometimes errors, which will prevent doc from being
   # generated at release time altogether.
@@ -68,7 +75,7 @@ jobs:
 
   release-plz:
     runs-on: ubuntu-24.04
-    needs: [clippy, cargo-fmt, cargo-doc]
+    needs: [clippy, cargo-fmt, cargo-doc, cargo-test]
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
