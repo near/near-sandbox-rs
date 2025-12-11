@@ -15,6 +15,9 @@ pub enum SandboxError {
     #[error("Timeout: Sandbox didn't start within provided timeout")]
     TimeoutError,
 
+    #[error("Could not start sandbox: Failed to bind to available ports after {0} retries.")]
+    SandboxStartupRetriesExhausted(usize),
+
     #[error("Error resolving binary: {0}")]
     BinaryError(String),
 

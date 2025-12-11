@@ -19,22 +19,21 @@ pub mod account;
 pub mod patch;
 
 /// Request an unused port and owned binded TcpListener from the OS.
-async fn pick_unused_port_locked() -> Result<TcpListener, SandboxError> {
+async fn pick_unused_port_guard() -> Result<TcpListener, SandboxError> {
     // Port 0 means the OS gives us an unused port
     // Important to use localhost as using 0.0.0.0 leads to users getting brief firewall popups to
     // allow inbound connections on MacOS.
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
-    let listener_port_guard = TcpListener::bind(addr)
+    TcpListener::bind(addr)
         .await
-        .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    Ok(listener_port_guard)
+        .map_err(|e| SandboxError::TcpError(TcpError::BindError(addr.port(), e)))
 }
 
 /// Acquire an unused port with binded TcpListener, and lock it for the duration until the sandbox server has
 /// been started.
-async fn acquire_unused_port_and_sandbox_lock() -> Result<(TcpListener, File), SandboxError> {
+async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError> {
     loop {
-        let listener_port_guard = pick_unused_port_locked().await?;
+        let listener_port_guard = pick_unused_port_guard().await?;
         let lockpath = std::env::temp_dir().join(format!(
             "near-sandbox-port{}.lock",
             listener_port_guard
@@ -51,7 +50,7 @@ async fn acquire_unused_port_and_sandbox_lock() -> Result<(TcpListener, File), S
 
 /// Try to acquire a specific port and lock it.
 /// Returns the port and lock file if successful.
-async fn try_acquire_specific_port(port: u16) -> Result<(TcpListener, File), SandboxError> {
+async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File), SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
     let listener_port_guard = TcpListener::bind(addr)
         .await
@@ -74,8 +73,8 @@ async fn acquire_or_lock_port(
     configured_port: Option<u16>,
 ) -> Result<(TcpListener, File), SandboxError> {
     match configured_port {
-        Some(port) => try_acquire_specific_port(port).await,
-        None => acquire_unused_port_and_sandbox_lock().await,
+        Some(port) => try_acquire_specific_port_guard(port).await,
+        None => acquire_unused_port_guard().await,
     }
 }
 
@@ -215,39 +214,62 @@ impl Sandbox {
         suppress_sandbox_logs_if_required();
         let home_dir = Self::init_home_dir_with_version(version).await?;
 
-        let (rpc_listener_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
-        let (net_listener_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
-
-        let rpc_addr = crate::runner::rpc_socket(
-            rpc_listener_guard
-                .local_addr()
-                .map_err(TcpError::LocalAddrError)?
-                .port(),
-        );
-
         config::set_sandbox_configs_with_config(&home_dir, &config)?;
         config::set_sandbox_genesis_with_config(&home_dir, &config)?;
 
-        let child = run_neard_with_port_guards(
-            home_dir.path(),
-            version,
-            rpc_listener_guard,
-            net_listener_guard,
-        )?;
+        let max_num_port_retries = std::env::var("NEAR_SANDBOX_PORT_TRANSFER_RETRY")
+            .unwrap_or_default()
+            .parse()
+            .unwrap_or(5);
 
-        info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
+        for attempt in 0..max_num_port_retries {
+            let (rpc_listener_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
+            let (net_listener_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
 
-        let rpc_addr = format!("http://{rpc_addr}");
+            let rpc_addr = crate::runner::rpc_socket(
+                rpc_listener_guard
+                    .local_addr()
+                    .map_err(TcpError::LocalAddrError)?
+                    .port(),
+            );
 
-        Self::wait_until_ready(&rpc_addr).await?;
+            let child = run_neard_with_port_guards(
+                home_dir.path(),
+                version,
+                rpc_listener_guard,
+                net_listener_guard,
+            )?;
 
-        Ok(Self {
-            home_dir,
-            rpc_addr,
-            rpc_port_lock,
-            net_port_lock,
-            process: child,
-        })
+            info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
+
+            let rpc_addr = format!("http://{rpc_addr}");
+
+            match Self::wait_until_ready(&rpc_addr).await {
+                Ok(()) => {
+                    return Ok(Self {
+                        home_dir,
+                        rpc_addr,
+                        rpc_port_lock,
+                        net_port_lock,
+                        process: child,
+                    })
+                }
+                Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
+                    info!(
+                        target: "sandbox",
+                        "Sandbox startup attempt {}/{} timed out, retrying...",
+                        attempt,
+                        max_num_port_retries
+                    );
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        Err(SandboxError::SandboxStartupRetriesExhausted(
+            max_num_port_retries,
+        ))
     }
 
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
