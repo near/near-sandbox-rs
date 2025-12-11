@@ -56,11 +56,25 @@ jobs:
         run: cargo build --all-features
 
   cargo-test:
-    runs-on: ubuntu-24.0.4
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run cargo test
-        run: cargo test --all-features
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          # NOTE: people usually run sandbox with 1.86.0 release for contracts.
+          # Hence, we test if 1.86.0 will run it. Change to stable release once it is supported
+          toolchain: 1.86.0
+          override: true
+          profile: minimal
+          components: rustfmt
+      - name: Install libudev-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install --assume-yes libudev-dev
+      - name: Run Tests
+        run: cargo test --all-features -- --nocapture
 
   # there're sometimes warnings, which signal, that the generated doc
   # won't look as expected, when rendered, and sometimes errors, which will prevent doc from being
