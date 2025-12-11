@@ -52,10 +52,10 @@ async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError
 /// Returns the port and lock file if successful.
 async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File), SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
-    let listener_port_guard = TcpListener::bind(addr)
+    let port_guard = TcpListener::bind(addr)
         .await
         .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    let port = listener_port_guard
+    let port = port_guard
         .local_addr()
         .map_err(TcpError::LocalAddrError)?
         .port();
@@ -66,7 +66,7 @@ async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File
         .try_lock_exclusive()
         .map_err(TcpError::LockingError)?;
 
-    Ok((listener_port_guard, lockfile))
+    Ok((port_guard, lockfile))
 }
 
 async fn acquire_or_lock_port(
