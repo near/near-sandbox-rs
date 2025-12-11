@@ -18,7 +18,7 @@ use crate::sandbox::patch::PatchState;
 pub mod account;
 pub mod patch;
 
-/// Request an unused port and owned binded TcpListener from the OS.
+/// Request an unused port, bound by TcpListener from the OS.
 async fn pick_unused_port_guard() -> Result<TcpListener, SandboxError> {
     // Port 0 means the OS gives us an unused port
     // Important to use localhost as using 0.0.0.0 leads to users getting brief firewall popups to
@@ -29,21 +29,21 @@ async fn pick_unused_port_guard() -> Result<TcpListener, SandboxError> {
         .map_err(|e| SandboxError::TcpError(TcpError::BindError(addr.port(), e)))
 }
 
-/// Acquire an unused port with binded TcpListener, and lock it for the duration until the sandbox server has
+/// Acquire an unused port that is bound with TcpListener, and lock it for the duration until the sandbox server has
 /// been started.
 async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError> {
     loop {
-        let listener_port_guard = pick_unused_port_guard().await?;
+        let port_guard = pick_unused_port_guard().await?;
         let lockpath = std::env::temp_dir().join(format!(
             "near-sandbox-port{}.lock",
-            listener_port_guard
+            port_guard
                 .local_addr()
                 .map_err(TcpError::LocalAddrError)?
                 .port()
         ));
         let lockfile = File::create(lockpath).map_err(TcpError::LockingError)?;
         if lockfile.try_lock_exclusive().is_ok() {
-            break Ok((listener_port_guard, lockfile));
+            break Ok((port_guard, lockfile));
         }
     }
 }
@@ -217,28 +217,28 @@ impl Sandbox {
         config::set_sandbox_configs_with_config(&home_dir, &config)?;
         config::set_sandbox_genesis_with_config(&home_dir, &config)?;
 
-        let max_num_port_retries = std::env::var("NEAR_SANDBOX_PORT_TRANSFER_RETRY")
-            .unwrap_or_default()
-            .parse()
-            .unwrap_or(5);
+        let max_num_port_retries = config
+            .port_transfer_retries
+            .or_else(|| {
+                std::env::var("NEAR_SANDBOX_PORT_TRANSFER_RETRY")
+                    .ok()
+                    .and_then(|s| s.parse::<usize>().ok())
+            })
+            .unwrap_or(5usize);
 
         for attempt in 0..max_num_port_retries {
-            let (rpc_listener_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
-            let (net_listener_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
+            let (rpc_guard, rpc_port_lock) = acquire_or_lock_port(config.rpc_port).await?;
+            let (net_guard, net_port_lock) = acquire_or_lock_port(config.net_port).await?;
 
             let rpc_addr = crate::runner::rpc_socket(
-                rpc_listener_guard
+                rpc_guard
                     .local_addr()
                     .map_err(TcpError::LocalAddrError)?
                     .port(),
             );
 
-            let child = run_neard_with_port_guards(
-                home_dir.path(),
-                version,
-                rpc_listener_guard,
-                net_listener_guard,
-            )?;
+            let mut child =
+                run_neard_with_port_guards(home_dir.path(), version, rpc_guard, net_guard)?;
 
             info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
@@ -261,9 +261,13 @@ impl Sandbox {
                         attempt,
                         max_num_port_retries
                     );
+                    child.kill().await.expect("couldn't kill child");
                     continue;
                 }
-                Err(e) => return Err(e),
+                Err(e) => {
+                    child.kill().await.expect("couldn't kill child");
+                    return Err(e);
+                }
             }
         }
 

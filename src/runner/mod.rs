@@ -62,7 +62,7 @@ pub fn run_neard_with_port_guards(
         &net_addr,
     ];
 
-    // NOTE: Droping listeners in order to enable usage of ports for neard
+    // NOTE: Dropping listeners in order to enable usage of ports for neard
     // not the best solution, but at least lowers the window for possible race condition
     drop(rpc_listener_guard);
     drop(net_listener_guard);

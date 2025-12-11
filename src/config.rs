@@ -181,6 +181,8 @@ pub struct SandboxConfig {
     pub rpc_port: Option<u16>,
     /// Port that Network will be bound to. Will be picked randomly if not set.
     pub net_port: Option<u16>,
+    /// Number of retries to send port to sandbox instance. Will be set to 5 by default.
+    pub port_transfer_retries: Option<usize>,
 }
 
 /// Overwrite the $home_dir/config.json file over a set of entries. `value` will be used per (key, value) pair
