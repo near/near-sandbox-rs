@@ -5,7 +5,7 @@ use std::{fs::File, net::Ipv4Addr};
 use fs4::FileExt;
 use near_account_id::AccountId;
 use tempfile::TempDir;
-use tokio::net::TcpListener;
+use tokio::net::TcpSocket;
 use tokio::process::Child;
 use tracing::{error, info};
 
@@ -19,19 +19,31 @@ pub mod account;
 pub mod patch;
 
 /// Request an unused port, bound by TcpListener from the OS.
-async fn pick_unused_port_guard() -> Result<TcpListener, SandboxError> {
+async fn pick_unused_port_guard() -> Result<TcpSocket, SandboxError> {
     // Port 0 means the OS gives us an unused port
     // Important to use localhost as using 0.0.0.0 leads to users getting brief firewall popups to
     // allow inbound connections on MacOS.
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
-    TcpListener::bind(addr)
-        .await
-        .map_err(|e| SandboxError::TcpError(TcpError::BindError(addr.port(), e)))
+    let tcp_socket = TcpSocket::new_v4().map_err(|_| TcpError::SocketCreationError)?;
+
+    tcp_socket
+        .set_reuseport(true)
+        .map_err(|_| TcpError::SocketSetReusePortError)?;
+
+    tcp_socket
+        .set_reuseaddr(true)
+        .map_err(|_| TcpError::SocketSetReusePortError)?;
+
+    tcp_socket
+        .bind(std::net::SocketAddr::V4(addr))
+        .map_err(|e| TcpError::BindError(addr.port(), e))?;
+
+    Ok(tcp_socket)
 }
 
 /// Acquire an unused port that is bound with TcpListener, and lock it for the duration until the sandbox server has
 /// been started.
-async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError> {
+async fn acquire_unused_port_guard() -> Result<(TcpSocket, File), SandboxError> {
     loop {
         let port_guard = pick_unused_port_guard().await?;
         let lockpath = std::env::temp_dir().join(format!(
@@ -50,12 +62,23 @@ async fn acquire_unused_port_guard() -> Result<(TcpListener, File), SandboxError
 
 /// Try to acquire a specific port and lock it.
 /// Returns the port and lock file if successful.
-async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File), SandboxError> {
+async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpSocket, File), SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
-    let listener_port_guard = TcpListener::bind(addr)
-        .await
+    let tcp_socket = TcpSocket::new_v4().map_err(|_| TcpError::SocketCreationError)?;
+
+    tcp_socket
+        .set_reuseport(true)
+        .map_err(|_| TcpError::SocketSetReusePortError)?;
+
+    tcp_socket
+        .set_reuseaddr(true)
+        .map_err(|_| TcpError::SocketSetReusePortError)?;
+
+    tcp_socket
+        .bind(std::net::SocketAddr::V4(addr))
         .map_err(|e| TcpError::BindError(addr.port(), e))?;
-    let port = listener_port_guard
+
+    let port = tcp_socket
         .local_addr()
         .map_err(TcpError::LocalAddrError)?
         .port();
@@ -66,12 +89,12 @@ async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpListener, File
         .try_lock_exclusive()
         .map_err(TcpError::LockingError)?;
 
-    Ok((listener_port_guard, lockfile))
+    Ok((tcp_socket, lockfile))
 }
 
 async fn acquire_or_lock_port(
     configured_port: Option<u16>,
-) -> Result<(TcpListener, File), SandboxError> {
+) -> Result<(TcpSocket, File), SandboxError> {
     match configured_port {
         Some(port) => try_acquire_specific_port_guard(port).await,
         None => acquire_unused_port_guard().await,
@@ -541,9 +564,12 @@ mod tests {
                     tokio::spawn(async move {
                         match Sandbox::start_sandbox().await {
                             Ok(s1) => {
+                                use rand::Rng;
+
+                                let delay_ms = rand::thread_rng().gen_range(100..=500);
+
                                 println!("+ Sandbox {} ({}) started successfully", i, s1.rpc_addr);
-                                tokio::time::sleep(Duration::from_millis(fastrand::u64(100..=500)))
-                                    .await;
+                                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                                 drop(s1);
                             }
                             Err(e) => {

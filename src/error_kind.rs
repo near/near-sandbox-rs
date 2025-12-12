@@ -54,7 +54,16 @@ impl From<ureq::Error> for SandboxRpcError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum TcpError {
-    #[error("Error while binding listener to a port {0}: {1}")]
+    #[error("Error while creating a socket")]
+    SocketCreationError,
+
+    #[error("Error while requesting socket to reuse port")]
+    SocketSetReusePortError,
+
+    #[error("Error while requesting socket to reuse address")]
+    SocketSetReuseAddrError,
+
+    #[error("Error while binding socket to a port {0}: {1}")]
     BindError(u16, std::io::Error),
 
     #[error("Error while getting local address: {0}")]

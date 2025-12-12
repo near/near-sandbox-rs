@@ -33,8 +33,8 @@ pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Ch
 pub fn run_neard_with_port_guards(
     home_dir: &Path,
     version: &str,
-    rpc_listener_guard: tokio::net::TcpListener,
-    net_listener_guard: tokio::net::TcpListener,
+    rpc_listener_guard: tokio::net::TcpSocket,
+    net_listener_guard: tokio::net::TcpSocket,
 ) -> Result<Child, SandboxError> {
     let bin_path = ensure_sandbox_bin_with_version(version)?;
 
