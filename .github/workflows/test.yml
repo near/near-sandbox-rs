@@ -15,60 +15,125 @@ env:
   RUST_BACKTRACE: short
 
 jobs:
-  clippy:
+  check:
+    name: Clippy and fmt check
     runs-on: ubuntu-24.04
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
         run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.86.0
+        with:
+          components: clippy, rustfmt
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D clippy::all
 
-  examples:
-    needs: [clippy, cargo-fmt, cargo-doc]
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-    - name: Install libudev (Linux only)
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
-    - name: Run examples
-      run: |
-        cd examples
-        ./run_all.sh
-
-  cargo-fmt:
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
       - name: Run cargo fmt
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
-  build:
-    runs-on: ubuntu-24.04
+  test-platforms:
+    name: Test code on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - name: Run cargo build
-        run: cargo build --all-features
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install libudev-dev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run Tests
+        run: cargo test --all-features -- --nocapture
 
   # there're sometimes warnings, which signal, that the generated doc
   # won't look as expected, when rendered, and sometimes errors, which will prevent doc from being
   # generated at release time altogether.
-  cargo-doc:
+  check-doc:
+    name: Compile documentation
     runs-on: ubuntu-24.04
-
+    env:
+      RUSTDOCFLAGS: "-D warnings"
     steps:
-      - uses: actions/checkout@v4
-      - name: run cargo doc
-        run: RUSTDOCFLAGS="-D warnings" cargo doc
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install libudev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run cargo doc
+        run: cargo doc
+
+  check-examples:
+    name: Compile and run examples
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    needs: [check, test-platforms, check-doc]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install libudev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run examples
+        run: |
+          cd examples
+          ./run_all.sh
 
   release-plz:
+    name: Release-plz
     runs-on: ubuntu-24.04
-    needs: [clippy, cargo-fmt, cargo-doc]
+    needs: [check, check-doc, test-platforms, check-examples]
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
@@ -76,11 +141,14 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
         run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
         env:

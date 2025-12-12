@@ -12,8 +12,14 @@ pub enum SandboxError {
     #[error("Runtime error: {0}")]
     RuntimeError(std::io::Error),
 
+    #[error("Error while trying to shutdown the sandbox: {0}")]
+    ShutdownError(std::io::Error),
+
     #[error("Timeout: Sandbox didn't start within provided timeout")]
     TimeoutError,
+
+    #[error("Could not start sandbox: Failed to bind to available ports after {0} retries.")]
+    SandboxStartupRetriesExhausted(usize),
 
     #[error("Error resolving binary: {0}")]
     BinaryError(String),
@@ -50,8 +56,15 @@ impl From<ureq::Error> for SandboxRpcError {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
 pub enum TcpError {
-    #[error("Error while binding listener to a port {0}: {1}")]
+    #[error("Error while creating a socket")]
+    SocketCreationError,
+
+    #[error("Error while requesting socket to reuse address")]
+    SocketSetReuseAddrError,
+
+    #[error("Error while binding socket to a port {0}: {1}")]
     BindError(u16, std::io::Error),
 
     #[error("Error while getting local address: {0}")]

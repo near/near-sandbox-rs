@@ -33,8 +33,13 @@ pub const DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY: &str =
     "ed25519:5BGSaf6YjVm7565VzWQHNxoyEjwr3jUpRJSGjREvU9dB";
 pub const DEFAULT_GENESIS_ACCOUNT_BALANCE: NearToken = NearToken::from_near(10_000);
 
+/// Generates a pseudo-random AccountId for testing and development
+///
+/// Creates an account ID in the format `dev-acc-HHMMSS-{random}.sandbox` where:
+/// - `HHMMSS` is the current UTC time (hours, minutes, seconds)
+/// - `{random}` is a random 32-bit unsigned integer
 #[cfg(feature = "generate")]
-pub(crate) fn random_account_id() -> AccountId {
+pub fn random_account_id() -> AccountId {
     use rand::Rng;
 
     let mut rng = rand::thread_rng();
@@ -50,22 +55,22 @@ pub(crate) fn random_account_id() -> AccountId {
 
 /// Generates pseudo-random base58 encoded ed25519 secret and public keys
 ///
-/// WARNING: Prefer using `SecretKey` and `PublicKey` from [`near_crypto`](https://crates.io/crates/near-crypto) or [`near_sandbox_utils::GenesisAccount::generate_random()`](near_sandbox_utils::GenesisAccount::generate_random())
+/// WARNING: Prefer using `SecretKey` and `PublicKey` from [`near_crypto`](https://crates.io/crates/near-crypto) or [`near_sandbox::GenesisAccount::generate_random()`](near_sandbox::GenesisAccount::generate_random())
 ///
 /// ## Generating random key pair for genesis account:
 /// ```rust,no_run
 /// # fn example() {
-/// let (private_key, public_key) = near_sandbox_utils::random_key_pair();
-/// let custom_genesis = near_sandbox_utils::GenesisAccount {
-///     account_id: "alice",
+/// let (private_key, public_key) = near_sandbox::random_key_pair();
+/// let custom_genesis = near_sandbox::GenesisAccount {
+///     account_id: "alice".parse().unwrap(),
 ///     private_key,
 ///     public_key,
 ///     ..Default::default()
-/// }
+/// };
 /// # }
 /// ```
 #[cfg(feature = "generate")]
-pub(crate) fn random_key_pair() -> (String, String) {
+pub fn random_key_pair() -> (String, String) {
     let mut rng = rand::rngs::OsRng;
     let signing_key: [u8; ed25519_dalek::KEYPAIR_LENGTH] =
         ed25519_dalek::SigningKey::generate(&mut rng).to_keypair_bytes();
@@ -181,6 +186,8 @@ pub struct SandboxConfig {
     pub rpc_port: Option<u16>,
     /// Port that Network will be bound to. Will be picked randomly if not set.
     pub net_port: Option<u16>,
+    /// Number of retries to send port to sandbox instance. Will be set to 5 by default.
+    pub port_transfer_retries: Option<usize>,
 }
 
 /// Overwrite the $home_dir/config.json file over a set of entries. `value` will be used per (key, value) pair

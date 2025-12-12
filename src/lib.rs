@@ -10,6 +10,9 @@ pub use runner::install;
 pub use sandbox::patch::FetchData;
 pub use sandbox::Sandbox;
 
+#[cfg(feature = "generate")]
+pub use config::{random_account_id, random_key_pair};
+
 // The current version of the sandbox node we want to point to.
 // Should be updated to the latest release of nearcore.
 // Currently pointing to nearcore@v2.10.2 released on December 11, 2025

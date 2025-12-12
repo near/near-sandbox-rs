@@ -41,6 +41,7 @@ ed25519-dalek = { version = "2.2.0", default-features = false, features = [
 bs58 = { version = "0.5.0", optional = true }
 
 [dev-dependencies]
+futures = { version = "0.3.31", default-features = false }
 tokio = { version = "1", default-features = false, features = [
     "macros",
     "rt-multi-thread",
@@ -50,3 +51,4 @@ near-api = "0.7"
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = ["dep:dirs-next"]
+__stress_test = ["rand"]
