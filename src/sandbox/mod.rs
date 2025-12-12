@@ -26,13 +26,12 @@ async fn pick_unused_port_guard() -> Result<TcpSocket, SandboxError> {
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
     let tcp_socket = TcpSocket::new_v4().map_err(|_| TcpError::SocketCreationError)?;
 
-    tcp_socket
-        .set_reuseport(true)
-        .map_err(|_| TcpError::SocketSetReusePortError)?;
-
+    // Use SO_REUSEADDR to allow neard to bind the port immediatelly after we release it here
+    // without waiting for TIME_WAIT timeout.
+    // More details: https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ/14388707#14388707
     tcp_socket
         .set_reuseaddr(true)
-        .map_err(|_| TcpError::SocketSetReusePortError)?;
+        .map_err(|_| TcpError::SocketSetReuseAddrError)?;
 
     tcp_socket
         .bind(std::net::SocketAddr::V4(addr))
@@ -66,13 +65,12 @@ async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpSocket, File),
     let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
     let tcp_socket = TcpSocket::new_v4().map_err(|_| TcpError::SocketCreationError)?;
 
-    tcp_socket
-        .set_reuseport(true)
-        .map_err(|_| TcpError::SocketSetReusePortError)?;
-
+    // Use SO_REUSEADDR to allow neard to bind the port immediatelly after we release it here
+    // without waiting for TIME_WAIT timeout.
+    // More details: https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ/14388707#14388707
     tcp_socket
         .set_reuseaddr(true)
-        .map_err(|_| TcpError::SocketSetReusePortError)?;
+        .map_err(|_| TcpError::SocketSetReuseAddrError)?;
 
     tcp_socket
         .bind(std::net::SocketAddr::V4(addr))

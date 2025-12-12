@@ -53,12 +53,10 @@ impl From<ureq::Error> for SandboxRpcError {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
 pub enum TcpError {
     #[error("Error while creating a socket")]
     SocketCreationError,
-
-    #[error("Error while requesting socket to reuse port")]
-    SocketSetReusePortError,
 
     #[error("Error while requesting socket to reuse address")]
     SocketSetReuseAddrError,
