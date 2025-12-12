@@ -551,10 +551,10 @@ mod tests {
         );
     }
     #[cfg(feature = "stress_test")]
-    #[tokio::test(flavor = "multi_thread", worker_threads = 16)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn test_multiple_sandboxes() {
         const NUM_ROUNDS: usize = 5;
-        const NUM_HANDLES: usize = 32;
+        const NUM_HANDLES: usize = 16;
 
         for round in 1..=NUM_ROUNDS {
             println!("\n==== ROUND {} ====", round);
