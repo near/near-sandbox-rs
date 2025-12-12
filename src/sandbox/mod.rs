@@ -261,7 +261,8 @@ impl Sandbox {
                     .port(),
             );
 
-            // NOTE: We scilence the stderr of the `neard` up untill last retry
+            // NOTE: We the silence output to `stderr` of the `neard` up until last retry, so we
+            // don't confuse user in case there is port collision during retries.
             let stderr_for_child = if attempt < max_num_port_retries {
                 Some(Stdio::null())
             } else {
@@ -271,9 +272,9 @@ impl Sandbox {
             let mut child = run_neard_with_port_guards(
                 home_dir.path(),
                 version,
-                stderr_for_child,
                 rpc_guard,
                 net_guard,
+                stderr_for_child,
             )?;
 
             info!(target: "sandbox", "Attempting to start a sandbox at {} with pid={:?}", rpc_addr, child.id());

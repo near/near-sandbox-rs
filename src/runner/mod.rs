@@ -32,13 +32,13 @@ pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Ch
 /// port reallocation by the OS. They are dropped just before Command::spawn()
 /// to minimize the race window where another process could claim the ports.
 ///
-/// `stderr` variable for a `neard` process defaults to `Stdio::inherit` if `None` is passed
+/// `stderr` variable is passed to `neard` process and defaults to `Stdio::inherit` if `None` is passed
 pub fn run_neard_with_port_guards(
     home_dir: &Path,
     version: &str,
-    stderr: Option<Stdio>,
     rpc_listener_guard: tokio::net::TcpSocket,
     net_listener_guard: tokio::net::TcpSocket,
+    stderr: Option<Stdio>,
 ) -> Result<Child, SandboxError> {
     let bin_path = ensure_sandbox_bin_with_version(version)?;
 
