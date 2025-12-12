@@ -4,6 +4,7 @@ use tokio::process::{Child, Command};
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
 use crate::error_kind::{SandboxError, TcpError};
 
@@ -30,9 +31,12 @@ pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Ch
 /// The TcpListeners are held until immediately before spawning to prevent
 /// port reallocation by the OS. They are dropped just before Command::spawn()
 /// to minimize the race window where another process could claim the ports.
+///
+/// `stderr` variable for a `neard` process defaults to `Stdio::inherit` if `None` is passed
 pub fn run_neard_with_port_guards(
     home_dir: &Path,
     version: &str,
+    stderr: Option<Stdio>,
     rpc_listener_guard: tokio::net::TcpSocket,
     net_listener_guard: tokio::net::TcpSocket,
 ) -> Result<Child, SandboxError> {
@@ -67,9 +71,12 @@ pub fn run_neard_with_port_guards(
     drop(rpc_listener_guard);
     drop(net_listener_guard);
 
+    // NOTE: We discard stderr of `neard`, as there might be port collisions resulting in `neard`
+    // panicing that `near-sandbox` is taking care of.
     Command::new(&bin_path)
         .args(options)
         .envs(log_vars())
+        .stderr(stderr.unwrap_or(Stdio::inherit()))
         .spawn()
         .map_err(SandboxError::RuntimeError)
 }

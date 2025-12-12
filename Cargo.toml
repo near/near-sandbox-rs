@@ -51,4 +51,4 @@ near-api = "0.7"
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = ["dep:dirs-next"]
-stress_test = ["rand"]
+__stress_test = ["rand"]

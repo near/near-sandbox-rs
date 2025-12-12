@@ -1,4 +1,5 @@
 use std::net::SocketAddrV4;
+use std::process::Stdio;
 use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
 
@@ -7,7 +8,7 @@ use near_account_id::AccountId;
 use tempfile::TempDir;
 use tokio::net::TcpSocket;
 use tokio::process::Child;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
@@ -260,36 +261,56 @@ impl Sandbox {
                     .port(),
             );
 
-            let mut child =
-                run_neard_with_port_guards(home_dir.path(), version, rpc_guard, net_guard)?;
+            // NOTE: We scilence the stderr of the `neard` up untill last retry
+            let stderr_for_child = if attempt < max_num_port_retries {
+                Some(Stdio::null())
+            } else {
+                None
+            };
 
-            info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
+            let mut child = run_neard_with_port_guards(
+                home_dir.path(),
+                version,
+                stderr_for_child,
+                rpc_guard,
+                net_guard,
+            )?;
+
+            info!(target: "sandbox", "Attempting to start a sandbox at {} with pid={:?}", rpc_addr, child.id());
 
             let rpc_addr = format!("http://{rpc_addr}");
 
             match Self::wait_until_ready(&rpc_addr).await {
                 Ok(()) => {
+                    info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
+
                     return Ok(Self {
                         home_dir,
                         rpc_addr,
                         rpc_port_lock,
                         net_port_lock,
                         process: child,
-                    })
+                    });
                 }
                 Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
-                    info!(
+                    warn!(
                         target: "sandbox",
                         "Sandbox startup attempt {}/{} timed out, retrying...",
                         attempt,
                         max_num_port_retries
                     );
-                    child.kill().await.expect("couldn't kill child");
+
+                    child.kill().await.map_err(SandboxError::ShutdownError)?;
+                    child.wait().await.map_err(SandboxError::ShutdownError)?;
+
                     continue;
                 }
                 Err(SandboxError::TimeoutError) => {
                     error!(target: "sandbox", "Couldn't start sandbox after {} attempts", max_num_port_retries);
-                    child.kill().await.expect("couldn't kill child");
+
+                    child.kill().await.map_err(SandboxError::ShutdownError)?;
+                    child.wait().await.map_err(SandboxError::ShutdownError)?;
+
                     return Err(SandboxError::SandboxStartupRetriesExhausted(
                         max_num_port_retries,
                     ));
@@ -548,7 +569,8 @@ mod tests {
             height
         );
     }
-    #[cfg(feature = "stress_test")]
+
+    #[cfg(feature = "__stress_test")]
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn test_multiple_sandboxes() {
         const NUM_ROUNDS: usize = 5;

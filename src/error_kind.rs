@@ -12,6 +12,9 @@ pub enum SandboxError {
     #[error("Runtime error: {0}")]
     RuntimeError(std::io::Error),
 
+    #[error("Error while trying to shutdown the sandbox: {0}")]
+    ShutdownError(std::io::Error),
+
     #[error("Timeout: Sandbox didn't start within provided timeout")]
     TimeoutError,
 
