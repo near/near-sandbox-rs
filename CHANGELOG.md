@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4](https://github.com/near/near-sandbox-rs/compare/v0.3.3...v0.3.4) - 2025-12-13
+
+### Fixed
+
+- kill near-sandbox process on drop ([#44](https://github.com/near/near-sandbox-rs/pull/44))
+
 ## [0.3.3](https://github.com/near/near-sandbox-rs/compare/v0.3.2...v0.3.3) - 2025-12-12
 
 ### Fixed
