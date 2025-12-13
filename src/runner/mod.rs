@@ -77,6 +77,7 @@ pub fn run_neard_with_port_guards(
         .args(options)
         .envs(log_vars())
         .stderr(stderr.unwrap_or(Stdio::inherit()))
+        .kill_on_drop(true)
         .spawn()
         .map_err(SandboxError::RuntimeError)
 }
