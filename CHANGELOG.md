@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3](https://github.com/near/near-sandbox-rs/compare/v0.3.2...v0.3.3) - 2025-12-12
+
+### Fixed
+
+- Improved available port selection during sandbox startup, so you should not see "port is already in use" anymore ([#40](https://github.com/near/near-sandbox-rs/pull/40))
+
+### Other
+
+- Update nearcore version to 2.10.2 ([#41](https://github.com/near/near-sandbox-rs/pull/41))
+
 ## [0.3.2](https://github.com/near/near-sandbox-rs/compare/v0.3.1...v0.3.2) - 2025-12-04
 
 ### Other
