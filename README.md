@@ -200,7 +200,7 @@ Customize sandbox behavior with these environment variables:
 | Variable | Description |
 |----------|-------------|
 | `NEAR_ENABLE_SANDBOX_LOG` | Set to `1` to enable sandbox logging (must be used with `NEAR_SANDBOX_LOG`) |
-| `NEAR_SANDBOX_LOG` | Log filter forwarded to `RUST_LOG` (e.g., `near=info,debug`) |
+| `NEAR_SANDBOX_LOG` | Log filter forwarded to `RUST_LOG` (e.g., `near=info,runtime=debug`) |
 | `NEAR_SANDBOX_LOG_STYLE` | Log style forwarded to `RUST_LOG_STYLE` |
 | `NEAR_SANDBOX_BIN_PATH` | Path to a custom `neard-sandbox` binary |
 | `NEAR_RPC_TIMEOUT_SECS` | Timeout for sandbox startup (default: 10) |
