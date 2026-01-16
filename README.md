@@ -156,30 +156,39 @@ async fn test_custom_rpc_config() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Logging
 
-By default, sandbox logs are suppressed. To enable logging, you need to set **both** environment variables:
+By default, sandbox logs are suppressed (set to `error` level). To enable logging:
 
 ```bash
-# Enable sandbox logging AND specify what to log
+# Enable sandbox logging (uses neard's default log levels)
 export NEAR_ENABLE_SANDBOX_LOG=1
-export NEAR_SANDBOX_LOG="near=info,stats=info"
 ```
 
-**Important:** Setting `NEAR_ENABLE_SANDBOX_LOG=1` alone is not enough. You must also set `NEAR_SANDBOX_LOG` to specify which modules and levels to log. The value of `NEAR_SANDBOX_LOG` is forwarded to the `RUST_LOG` environment variable of the spawned `neard` process.
+Optionally, customize the log filter with `NEAR_SANDBOX_LOG`:
+
+```bash
+# Enable logging with a custom filter
+export NEAR_ENABLE_SANDBOX_LOG=1
+export NEAR_SANDBOX_LOG="near=info,runtime=debug"
+```
+
+**How it works:**
+- When `NEAR_ENABLE_SANDBOX_LOG` is **not set** (or set to `0`): logs are suppressed by forcing `NEAR_SANDBOX_LOG="near=error,stats=error,network=error"`, regardless of any value you set
+- When `NEAR_ENABLE_SANDBOX_LOG=1`: your `NEAR_SANDBOX_LOG` value is forwarded to neard as `RUST_LOG`. If `NEAR_SANDBOX_LOG` is not set, neard uses its default log configuration
 
 ### Logging Examples
 
 ```bash
-# Basic nearcore logging
-NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="near=info" cargo test
+# Basic logging with neard defaults
+NEAR_ENABLE_SANDBOX_LOG=1 cargo test
 
-# Debug a specific module
+# Custom log filter
 NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="near=info,runtime=debug" cargo test
 
 # Verbose logging (warning: very noisy)
 NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="debug" cargo test
 
-# Log to a file (via shell redirection, since file logging is not built-in)
-NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="near=info" cargo test 2> sandbox.log
+# Log to a file (via shell redirection)
+NEAR_ENABLE_SANDBOX_LOG=1 cargo test 2> sandbox.log
 ```
 
 ### Common Log Targets
@@ -191,7 +200,6 @@ NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="near=info" cargo test 2> sandbox.log
 | `network` | P2P networking |
 | `runtime` | Runtime/VM execution |
 | `db` | Database operations |
-| `sandbox` | Sandbox-specific logs |
 
 ## Environment Variables
 
@@ -199,8 +207,8 @@ Customize sandbox behavior with these environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `NEAR_ENABLE_SANDBOX_LOG` | Set to `1` to enable sandbox logging (must be used with `NEAR_SANDBOX_LOG`) |
-| `NEAR_SANDBOX_LOG` | Log filter forwarded to `RUST_LOG` (e.g., `near=info,runtime=debug`) |
+| `NEAR_ENABLE_SANDBOX_LOG` | Set to `1` to enable sandbox logging |
+| `NEAR_SANDBOX_LOG` | Log filter forwarded to `RUST_LOG` (e.g., `near=info,runtime=debug`). Only effective when `NEAR_ENABLE_SANDBOX_LOG=1` |
 | `NEAR_SANDBOX_LOG_STYLE` | Log style forwarded to `RUST_LOG_STYLE` |
 | `NEAR_SANDBOX_BIN_PATH` | Path to a custom `neard-sandbox` binary |
 | `NEAR_RPC_TIMEOUT_SECS` | Timeout for sandbox startup (default: 10) |
