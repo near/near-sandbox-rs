@@ -22,8 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install libudev (Linux only)
-        if: runner.os == 'Linux'
+      - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
@@ -35,9 +34,10 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}
+          shared-key: linux-clippy
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
+          cache-all-crates: true
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D clippy::all
@@ -66,9 +66,10 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}
+          shared-key: ${{ runner.os }}-test
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
+          cache-all-crates: true
 
       - name: Run Tests
         run: cargo test --all-features -- --nocapture
@@ -85,8 +86,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install libudev (Linux only)
-        if: runner.os == 'Linux'
+      - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
@@ -96,9 +96,10 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}
+          shared-key: linux-doc
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
+          cache-all-crates: true
 
       - name: Run cargo doc
         run: cargo doc
@@ -125,9 +126,10 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}
+          shared-key: ${{ runner.os }}-examples
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
+          cache-all-crates: true
 
       - name: Run examples
         run: |
@@ -146,8 +148,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
 
-      - name: Install libudev (Linux only)
-        if: runner.os == 'Linux'
+      - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       - name: Install Rust toolchain
