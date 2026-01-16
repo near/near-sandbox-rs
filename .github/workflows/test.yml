@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
       # will be changed to stable once contract compilation will be fixed.
@@ -37,6 +37,7 @@ jobs:
         with:
           shared-key: ${{ runner.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D clippy::all
@@ -52,11 +53,11 @@ jobs:
         os: [ubuntu-24.04, macos-latest]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install libudev-dev (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
       # will be changed to stable once contract compilation will be fixed.
@@ -67,6 +68,7 @@ jobs:
         with:
           shared-key: ${{ runner.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
 
       - name: Run Tests
         run: cargo test --all-features -- --nocapture
@@ -81,11 +83,11 @@ jobs:
       RUSTDOCFLAGS: "-D warnings"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
       # will be changed to stable once contract compilation will be fixed.
@@ -96,6 +98,7 @@ jobs:
         with:
           shared-key: ${{ runner.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
 
       - name: Run cargo doc
         run: cargo doc
@@ -109,11 +112,11 @@ jobs:
     needs: [check, test-platforms, check-doc]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get -y install libudev-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
       # will be changed to stable once contract compilation will be fixed.
@@ -124,6 +127,7 @@ jobs:
         with:
           shared-key: ${{ runner.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
 
       - name: Run examples
         run: |
@@ -137,20 +141,20 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
 
       - name: Install libudev (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt-get install libudev-dev libsystemd-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
+        uses: release-plz/action@v0.5
         env:
           # https://release-plz.ieni.dev/docs/github/trigger
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
