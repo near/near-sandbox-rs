@@ -154,16 +154,65 @@ async fn test_custom_rpc_config() -> Result<(), Box<dyn std::error::Error>> {
 2. The sandbox process runs in the background.
 3. When the `Sandbox` struct is dropped, the process is automatically killed.
 
+## Logging
+
+By default, sandbox logs are suppressed (set to `error` level). To enable logging:
+
+```bash
+# Enable sandbox logging (uses neard's default log levels)
+export NEAR_ENABLE_SANDBOX_LOG=1
+```
+
+Optionally, customize the log filter with `NEAR_SANDBOX_LOG`:
+
+```bash
+# Enable logging with a custom filter
+export NEAR_ENABLE_SANDBOX_LOG=1
+export NEAR_SANDBOX_LOG="near=info,runtime=debug"
+```
+
+**How it works:**
+- When `NEAR_ENABLE_SANDBOX_LOG` is **not set** (or set to `0`): logs are suppressed by forcing `NEAR_SANDBOX_LOG="near=error,stats=error,network=error"`, regardless of any value you set
+- When `NEAR_ENABLE_SANDBOX_LOG=1`: your `NEAR_SANDBOX_LOG` value is forwarded to neard as `RUST_LOG`. If `NEAR_SANDBOX_LOG` is not set, neard uses its default log configuration
+
+### Logging Examples
+
+```bash
+# Basic logging with neard defaults
+NEAR_ENABLE_SANDBOX_LOG=1 cargo test
+
+# Custom log filter
+NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="near=info,runtime=debug" cargo test
+
+# Verbose logging (warning: very noisy)
+NEAR_ENABLE_SANDBOX_LOG=1 NEAR_SANDBOX_LOG="debug" cargo test
+
+# Log to a file (via shell redirection)
+NEAR_ENABLE_SANDBOX_LOG=1 cargo test 2> sandbox.log
+```
+
+### Common Log Targets
+
+| Target | Description |
+|--------|-------------|
+| `near` | Core nearcore logs |
+| `stats` | Statistics and metrics |
+| `network` | P2P networking |
+| `runtime` | Runtime/VM execution |
+| `db` | Database operations |
+
 ## Environment Variables
 
 Customize sandbox behavior with these environment variables:
 
-- `SANDBOX_ARTIFACT_URL`: Override the download link for `neard`. Useful if you have trouble downloading from the default IPFS gateway.
-- `NEAR_RPC_TIMEOUT_SECS`: Set the timeout (in seconds) for waiting for the sandbox to start (default: 10).
-- `NEAR_SANDBOX_BIN_PATH`: Use your own pre-built `neard-sandbox` binary instead of the default. Be careful not to use NodeJs package!
-- `NEAR_ENABLE_SANDBOX_LOG`: Set to `1` to enable sandbox logging of `near-sandbox` (helpful for debugging).
-- `NEAR_SANDBOX_LOG`: Specify custom log levels for the sandbox (forwarded to the `RUST_LOG` environment variable).
-- `NEAR_SANDBOX_LOG_STYLE`: Specify custom log style for the sandbox (forwarded to the `RUST_LOG_STYLE` environment variable).
+| Variable | Description |
+|----------|-------------|
+| `NEAR_ENABLE_SANDBOX_LOG` | Set to `1` to enable sandbox logging |
+| `NEAR_SANDBOX_LOG` | Log filter forwarded to `RUST_LOG` (e.g., `near=info,runtime=debug`). Only effective when `NEAR_ENABLE_SANDBOX_LOG=1` |
+| `NEAR_SANDBOX_LOG_STYLE` | Log style forwarded to `RUST_LOG_STYLE` |
+| `NEAR_SANDBOX_BIN_PATH` | Path to a custom `neard-sandbox` binary |
+| `NEAR_RPC_TIMEOUT_SECS` | Timeout for sandbox startup (default: 10) |
+| `SANDBOX_ARTIFACT_URL` | Override the sandbox binary download URL |
 
 ## API Reference
 
