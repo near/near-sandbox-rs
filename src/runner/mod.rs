@@ -8,6 +8,8 @@ use std::process::Stdio;
 
 use crate::error_kind::{SandboxError, TcpError};
 
+pub(crate) mod cleanup;
+
 // Must be an IP address as `neard` expects socket address for network address.
 const DEFAULT_RPC_HOST: &str = "127.0.0.1";
 

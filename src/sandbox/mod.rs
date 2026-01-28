@@ -1,10 +1,9 @@
+use fs4::FileExt;
+use near_account_id::AccountId;
 use std::net::SocketAddrV4;
 use std::process::Stdio;
 use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
-
-use fs4::FileExt;
-use near_account_id::AccountId;
 use tempfile::TempDir;
 use tokio::net::TcpSocket;
 use tokio::process::Child;
@@ -115,6 +114,8 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
+    signal_handler: tokio::task::JoinHandle<()>,
+    original_pid: u32,
 }
 
 impl Sandbox {
@@ -285,12 +286,16 @@ impl Sandbox {
                 Ok(()) => {
                     info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
+                    let pid = child.id().expect("sandbox process must have PID");
+
                     return Ok(Self {
                         home_dir,
                         rpc_addr,
                         rpc_port_lock,
                         net_port_lock,
                         process: child,
+                        signal_handler: crate::runner::cleanup::spawn_signal_listener(pid),
+                        original_pid: pid,
                     });
                 }
                 Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
@@ -511,10 +516,18 @@ impl Drop for Sandbox {
         info!(
             target: "sandbox",
             "Cleaning up sandbox: pid={:?}",
-            self.process.id()
+            self.original_pid
         );
 
-        self.process.start_kill().expect("failed to kill sandbox");
+        // there was no SIGINT and SIGTERM if we reached this point.
+        self.signal_handler.abort();
+        // manually unregister PID, as there was no SIGINT/SIGTERM
+        crate::runner::cleanup::unregister_pid(self.original_pid);
+
+        if let Err(e) = self.process.start_kill() {
+            tracing::debug!(target: "sandbox", "Kill returned error (may already be dead): {}", e);
+        }
+
         let _ = self.process.try_wait();
     }
 }
