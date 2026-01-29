@@ -309,6 +309,11 @@ impl Sandbox {
                     child.kill().await.map_err(SandboxError::ShutdownError)?;
                     child.wait().await.map_err(SandboxError::ShutdownError)?;
 
+                    let data_dir = home_dir.path().join("data");
+                    if data_dir.exists() {
+                        std::fs::remove_dir_all(data_dir).map_err(SandboxError::FileError)?;
+                    }
+
                     continue;
                 }
                 Err(SandboxError::TimeoutError) => {
