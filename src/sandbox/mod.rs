@@ -333,7 +333,9 @@ impl Sandbox {
             }
         }
 
-        unreachable!("We return Sandbox instance or error via previous loop. loop is ensured to have at least one run");
+        unreachable!(
+            "We return Sandbox instance or error via previous loop. loop is ensured to have at least one run"
+        );
     }
 
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {

@@ -33,7 +33,7 @@
 //! cargo test --example singleton_sandbox
 //! ```
 
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::{Arc, atomic::AtomicUsize};
 
 use near_api::NetworkConfig;
 use tokio::sync::OnceCell;
