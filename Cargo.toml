@@ -1,7 +1,8 @@
 [package]
 name = "near-sandbox"
 version = "0.3.5"
-edition = "2021"
+edition = "2024"
+rust-version = "1.86.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/near/near-sandbox-rs"
 description = """
