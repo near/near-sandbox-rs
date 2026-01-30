@@ -526,12 +526,10 @@ impl Drop for Sandbox {
 /// NEAR_SANDBOX_LOG for higher levels of specificity. NEAR_SANDBOX_LOG args
 /// will be forward into RUST_LOG environment variable as to not conflict
 /// with similar named log targets.
-#[allow(clippy::collapsible_if)]
 fn suppress_sandbox_logs_if_required() {
-    if let Ok(val) = std::env::var("NEAR_ENABLE_SANDBOX_LOG") {
-        if val != "0" {
-            return;
-        }
+    // If NEAR_ENABLE_SANDBOX_LOG is set to anything other than "0", don't suppress logs
+    if std::env::var("NEAR_ENABLE_SANDBOX_LOG").is_ok_and(|val| val != "0") {
+        return;
     }
 
     // non-exhaustive list of targets to suppress, since choosing a default LogLevel
