@@ -7,8 +7,8 @@ mod runner;
 // Re-export important types for better user experience
 pub use config::{GenesisAccount, SandboxConfig};
 pub use runner::install;
-pub use sandbox::patch::FetchData;
 pub use sandbox::Sandbox;
+pub use sandbox::patch::FetchData;
 
 #[cfg(feature = "generate")]
 pub use config::{random_account_id, random_key_pair};

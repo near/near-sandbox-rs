@@ -2,7 +2,7 @@ use near_account_id::AccountId;
 use near_token::NearToken;
 use serde::Serialize;
 
-use crate::{config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY, error_kind::SandboxRpcError, Sandbox};
+use crate::{Sandbox, config::DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY, error_kind::SandboxRpcError};
 
 /// Builder for specifying what data to fetch from an RPC endpoint
 #[derive(Clone, Copy, Default)]

@@ -1,8 +1,8 @@
 use near_api::{Account, AccountId, NetworkConfig};
+use near_sandbox::Sandbox;
 use near_sandbox::config::{
     DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_BALANCE, DEFAULT_GENESIS_ACCOUNT_PUBLIC_KEY,
 };
-use near_sandbox::Sandbox;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

@@ -323,7 +323,9 @@ impl Sandbox {
             }
         }
 
-        unreachable!("We return Sandbox instance or error via previous loop. loop is ensured to have at least one run");
+        unreachable!(
+            "We return Sandbox instance or error via previous loop. loop is ensured to have at least one run"
+        );
     }
 
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
@@ -525,10 +527,10 @@ impl Drop for Sandbox {
 /// will be forward into RUST_LOG environment variable as to not conflict
 /// with similar named log targets.
 fn suppress_sandbox_logs_if_required() {
-    if let Ok(val) = std::env::var("NEAR_ENABLE_SANDBOX_LOG") {
-        if val != "0" {
-            return;
-        }
+    if let Ok(val) = std::env::var("NEAR_ENABLE_SANDBOX_LOG")
+        && val != "0"
+    {
+        return;
     }
 
     // non-exhaustive list of targets to suppress, since choosing a default LogLevel

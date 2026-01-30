@@ -1,7 +1,7 @@
 use near_account_id::AccountId;
 use near_token::NearToken;
 
-use crate::{config::DEFAULT_ACCOUNT_FOR_CLONING, error_kind::SandboxRpcError, FetchData, Sandbox};
+use crate::{FetchData, Sandbox, config::DEFAULT_ACCOUNT_FOR_CLONING, error_kind::SandboxRpcError};
 
 #[derive(Clone)]
 pub struct AccountCreation<'a> {
