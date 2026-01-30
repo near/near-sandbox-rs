@@ -11,6 +11,7 @@ use tracing::{error, info, warn};
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
+use crate::runner::cleanup::CleanupGuard;
 use crate::runner::{init_with_version, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
@@ -114,8 +115,7 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
-    signal_handler: tokio::task::JoinHandle<()>,
-    original_pid: u32,
+    _sandbox_guard: CleanupGuard,
 }
 
 impl Sandbox {
@@ -286,7 +286,8 @@ impl Sandbox {
                 Ok(()) => {
                     info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
-                    let pid = child.id().expect("sandbox process must have PID");
+                    let sandbox_guard =
+                        CleanupGuard::new(child.id().expect("sandbox process must have PID"));
 
                     return Ok(Self {
                         home_dir,
@@ -294,8 +295,7 @@ impl Sandbox {
                         rpc_port_lock,
                         net_port_lock,
                         process: child,
-                        signal_handler: crate::runner::cleanup::spawn_signal_listener(pid),
-                        original_pid: pid,
+                        _sandbox_guard: sandbox_guard,
                     });
                 }
                 Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
@@ -521,13 +521,8 @@ impl Drop for Sandbox {
         info!(
             target: "sandbox",
             "Cleaning up sandbox: pid={:?}",
-            self.original_pid
+            self.process.id()
         );
-
-        // there was no SIGINT and SIGTERM if we reached this point.
-        self.signal_handler.abort();
-        // manually unregister PID, as there was no SIGINT/SIGTERM
-        crate::runner::cleanup::unregister_pid(self.original_pid);
 
         if let Err(e) = self.process.start_kill() {
             tracing::debug!(target: "sandbox", "Kill returned error (may already be dead): {}", e);
