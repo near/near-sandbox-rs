@@ -24,8 +24,8 @@
 //! - Parallel-friendly - isolating tests with subaccount prevents test interference
 //!
 //! ## Cons
-//! - Higher memory usage - state accumulates as tests deploy contracts, produce blocks, and generate reciepts (no cleanup between tests)
-//! - Shared state - tests are not fully isolated; one test's `fast_forward()` affects othres
+//! - Higher memory usage - state accumulates as tests deploy contracts, produce blocks, and generate receipts (no cleanup between tests)
+//! - Shared state - tests are not fully isolated; one test's `fast_forward()` affects others
 //!
 //! ## Run This Example
 //! ```bash
@@ -41,7 +41,7 @@ use tokio::sync::OnceCell;
 /// Global singleton sandbox instance
 ///
 /// Using `OnceCell` ensures that sandbox is initialized only once, even when tests run in
-/// parallel. The `#[dtor]` cleanup in `near-sandbox` ensures the sandbox process is killed when
+/// parallel. The `atexit` cleanup in `near-sandbox` ensures the sandbox process is killed when
 /// the test binary exits
 static SHARED_SANDBOX: OnceCell<SharedEnv> = OnceCell::const_new();
 
@@ -129,7 +129,7 @@ impl SharedEnv {
     }
 }
 
-/// Get or initialize the shared sandbox environemnt.
+/// Get or initialize the shared sandbox environment.
 ///
 /// This is the main entry point for tests. Call this at the start of each test to get access to
 /// the shared sandbox.
@@ -143,7 +143,7 @@ pub async fn get_shared_env() -> &'static SharedEnv {
 async fn main() {
     println!("=== Singleton Sandbox Pattern Demo ===");
     println!(
-        "Run `cargo test --examples singleton_sandbox` for seeing this example work as intented!"
+        "Run `cargo test --examples singleton_sandbox` for seeing this example work as intended!"
     );
 }
 
