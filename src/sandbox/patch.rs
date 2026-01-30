@@ -545,7 +545,6 @@ mod tests {
                 "user",
                 serde_json::json!({ "user": "akorchyn", "periods": ["all-time"] }),
             )
-            .unwrap()
             .read_only()
             .fetch_from(&sandbox_network)
             .await
@@ -605,7 +604,6 @@ mod tests {
                 "user",
                 serde_json::json!({ "user": "akorchyn", "periods": ["all-time"] }),
             )
-            .unwrap()
             .read_only()
             .fetch_from(&sandbox_network)
             .await
