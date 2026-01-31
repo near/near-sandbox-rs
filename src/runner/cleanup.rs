@@ -28,8 +28,8 @@
 //!
 //! ## How this module was tested
 //! Module was tested against:
-//! - [Singleton_sandbox example](../../examples/singleton_sandbox.rs)
-//! - [Intents sandbox (simple `OnceCell`)](https://github.com/near/intents/blob/d38a46ad77/sandbox/src/lib.rs#L86-L108)
+//! - [`singleton_sandbox.rs` example](../../examples/singleton_sandbox.rs)
+//! - [Intents sandbox (`OnceCell`)](https://github.com/near/intents/blob/d38a46ad77/sandbox/src/lib.rs#L86-L108)
 //! - [Intents sandbox (atexit-based)](https://github.com/near/intents/blob/9e45cccb32/sandbox/src/lib.rs#L109-L141)
 //!
 //! Scenarios verified manually:
@@ -65,11 +65,13 @@ impl CleanupGuard {
         // Register atexit handler on first PID registration
         INIT.call_once(|| {
             #[cfg(unix)]
-            unsafe {
-                libc::atexit(cleanup_remaining_sandboxes);
-            }
+            {
+                unsafe {
+                    libc::atexit(cleanup_remaining_sandboxes);
+                }
 
-            spawn_signal_handler();
+                spawn_signal_handler();
+            }
         });
 
         register_pid(pid);

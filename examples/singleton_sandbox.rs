@@ -46,7 +46,7 @@ use tokio::sync::OnceCell;
 static SHARED_SANDBOX: OnceCell<SharedEnv> = OnceCell::const_new();
 
 /// Counter for generating unique subaccount names
-/// Each test gets a new subaccount like `0.test.sandbox`, `1.test.sandbox`, etc.
+/// Each test gets a new subaccount like `0.sandbox`, `1.sandbox`, etc.
 /// With `generate` feature flag, for `near-sandbox`, you can also use `near_sandbox::generate_account_id()`
 static ACCOUNT_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -100,7 +100,7 @@ impl SharedEnv {
 
     /// Generate a new unique subaccount for test isolation.
     ///
-    /// Each call returns a new account like `0.test.near`, `1.test.near`, etc.
+    /// Each call returns a new account like `0.sandbox`, `1.sandbox`, etc.
     /// This allows tests to run in parallel without interfering with each other.
     pub async fn generate_account(
         &self,
