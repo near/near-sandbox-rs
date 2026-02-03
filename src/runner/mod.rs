@@ -8,6 +8,7 @@ use std::process::Stdio;
 
 use crate::error_kind::{SandboxError, TcpError};
 
+#[cfg(feature = "singleton_cleanup")]
 pub(crate) mod cleanup;
 
 // Must be an IP address as `neard` expects socket address for network address.

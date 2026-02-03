@@ -3,7 +3,8 @@
 //! for significantly faster test execution.
 //!
 //! PLEASE MIND THAT THIS MIGHT NOT WORK WITH `nextest`
-//! as they are using [process-per-test](https://nexte.st/docs/design/why-process-per-test/)
+//! as they are using [process-per-test](https://nexte.st/docs/design/why-process-per-test/) model
+//! that is different from how `cargo test` executes things.
 //!
 //! ## The Problem
 //! Spinning up a new sandbox for each test is slow (~2-5 seconds per test). For test suites

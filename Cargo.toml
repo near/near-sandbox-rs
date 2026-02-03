@@ -18,6 +18,7 @@ tokio = { version = "1", default-features = false, features = [
     "net",
     "signal",
 ] }
+# `libc` is already pulled by `tokio`
 libc = { version = "0.2", default-features = false }
 binary-install = "0.4"
 ureq = { version = "2", default-features = false, features = ["json"] }
@@ -54,4 +55,13 @@ near-api = "0.8"
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = ["dep:dirs-next"]
+## Enables cleanup of `near-sandbox` processes stored in statics (`OnceCell`, `LazyLock`) that Rust doesn't drop on exit.
+## Spawns a signal handler thread and registers an `atexit` hook. 
+##
+## **Skip this feature** if you use nextest or per-test sandboxes.
+singleton_cleanup = []
 __stress_test = ["rand"]
+
+[[example]]
+name = "singleton_sandbox"
+required-features = ["singleton_cleanup"]

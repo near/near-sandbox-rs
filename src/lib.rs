@@ -1,3 +1,13 @@
+//! # Features
+//!
+//! | Feature | Default | Description |
+//! | --- | --- | --- |
+//! | `singleton_cleanup` | off | Registers an `atexit` hook and SIGINT handler to kill sandbox
+//! processes stored in statics (`OnceCell`, `LazyLock`). Not needed with nextest or per-test
+//! sandboxes since `kill_on_drop` already handles cleanup. |
+//! | `generate` | off | Enables `random_account_id` and `random_key_pair` helpers |
+//! | `global_install` | off | Installs the sandbox binary under `$HOME/.near` instead of `$OUT_DIR` |
+
 pub mod config;
 pub mod error_kind;
 pub mod sandbox;

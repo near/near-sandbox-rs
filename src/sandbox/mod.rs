@@ -11,10 +11,12 @@ use tracing::{error, info, warn};
 
 use crate::config::{self, SandboxConfig};
 use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
-use crate::runner::cleanup::CleanupGuard;
 use crate::runner::{init_with_version, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
+
+#[cfg(feature = "singleton_cleanup")]
+use crate::runner::cleanup::CleanupGuard;
 
 pub mod account;
 pub mod patch;
@@ -115,6 +117,7 @@ pub struct Sandbox {
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
     process: Child,
+    #[cfg(feature = "singleton_cleanup")]
     _sandbox_guard: CleanupGuard,
 }
 
@@ -286,17 +289,33 @@ impl Sandbox {
                 Ok(()) => {
                     info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
-                    let sandbox_guard =
-                        CleanupGuard::new(child.id().expect("sandbox process must have PID"));
+                    let sandbox: Self;
+                    #[cfg(feature = "singleton_cleanup")]
+                    {
+                        let sandbox_guard =
+                            CleanupGuard::new(child.id().expect("sandbox process must have PID"));
 
-                    return Ok(Self {
-                        home_dir,
-                        rpc_addr,
-                        rpc_port_lock,
-                        net_port_lock,
-                        process: child,
-                        _sandbox_guard: sandbox_guard,
-                    });
+                        sandbox = Self {
+                            home_dir,
+                            rpc_addr,
+                            rpc_port_lock,
+                            net_port_lock,
+                            process: child,
+                            _sandbox_guard: sandbox_guard,
+                        };
+                    }
+                    #[cfg(not(feature = "singleton_cleanup"))]
+                    {
+                        sandbox = Self {
+                            home_dir,
+                            rpc_addr,
+                            rpc_port_lock,
+                            net_port_lock,
+                            process: child,
+                        };
+                    }
+
+                    return Ok(sandbox);
                 }
                 Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
                     warn!(
