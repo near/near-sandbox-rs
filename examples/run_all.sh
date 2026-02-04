@@ -9,7 +9,7 @@ for example in $(find . -name "*.rs" -type f); do
     echo "--------------------------------"
 
     if [ "$example_name" = "singleton_sandbox" ]; then
-        CI=true cargo test --release --example $example_name --features singleton_cleanup -- --no-capture
+        CI=true cargo test --release --example $example_name --features singleton_cleanup -- --nocapture
     else
         CI=true cargo run --release --example $example_name
     fi
