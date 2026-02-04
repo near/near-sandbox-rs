@@ -152,10 +152,18 @@ fn kill_all_sandboxes() {
         return;
     };
 
+    #[cfg(unix)]
     for &pid in pids.iter() {
-        #[cfg(unix)]
         unsafe {
-            libc::kill(pid as i32, libc::SIGKILL);
+            let result = libc::kill(pid as i32, libc::SIGKILL);
+
+            if result != 0 {
+                let err = std::io::Error::last_os_error();
+                eprintln!(
+                    "near-sandbox cleanup: failed to send SIGKILL to PID {}: {}",
+                    pid, err
+                );
+            }
         }
     }
 }
