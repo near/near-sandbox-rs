@@ -118,7 +118,7 @@ pub struct Sandbox {
     pub net_port_lock: File,
     /// Sandboxed neard process
     process: Child,
-    /// Internal sandbox cleanup guard for statically stored [`Sandbox`](Sandbox)
+    /// Internal sandbox cleanup guard for statically stored [`Sandbox`]
     #[cfg(feature = "singleton_cleanup")]
     _sandbox_guard: CleanupGuard,
 }
