@@ -116,7 +116,9 @@ pub struct Sandbox {
     pub rpc_port_lock: File,
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
+    /// Sandboxed neard process
     process: Child,
+    /// Internal sandbox cleanup guard for statically stored [`Sandbox`](Sandbox)
     #[cfg(feature = "singleton_cleanup")]
     _sandbox_guard: CleanupGuard,
 }

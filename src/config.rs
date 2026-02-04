@@ -55,7 +55,7 @@ pub fn random_account_id() -> AccountId {
 
 /// Generates pseudo-random base58 encoded ed25519 secret and public keys
 ///
-/// WARNING: Prefer using `SecretKey` and `PublicKey` from [`near_crypto`](https://crates.io/crates/near-crypto) or [`near_sandbox::GenesisAccount::generate_random()`](near_sandbox::GenesisAccount::generate_random())
+/// WARNING: Prefer using `SecretKey` and `PublicKey` from [`near_crypto`](https://crates.io/crates/near-crypto) or [`near_sandbox::config::GenesisAccount::generate_random()`](GenesisAccount::generate_random())
 ///
 /// ## Generating random key pair for genesis account:
 /// ```rust,no_run
