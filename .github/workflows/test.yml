@@ -99,7 +99,7 @@ jobs:
           cache-all-crates: true
 
       - name: Run cargo doc
-        run: cargo doc
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --all-features --document-private-items
 
   check-examples:
     name: Compile and run examples
