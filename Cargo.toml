@@ -1,7 +1,8 @@
 [package]
 name = "near-sandbox"
 version = "0.3.5"
-edition = "2018"
+edition = "2024"
+rust-version = "1.86.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/near/near-sandbox-rs"
 description = """
@@ -15,7 +16,10 @@ tokio = { version = "1", default-features = false, features = [
     "time",
     "process",
     "net",
+    "signal",
 ] }
+# `libc` is already pulled by `tokio`
+libc = { version = "0.2", default-features = false }
 binary-install = "0.4"
 ureq = { version = "2", default-features = false, features = ["json"] }
 fs4 = { version = "0.6", default-features = false, features = ["sync"] }
@@ -46,9 +50,18 @@ tokio = { version = "1", default-features = false, features = [
     "macros",
     "rt-multi-thread",
 ] }
-near-api = "0.7"
+near-api = "0.8"
 
 [features]
 generate = ["rand", "chrono", "ed25519-dalek", "bs58"]
 global_install = ["dep:dirs-next"]
+## Enables cleanup of `near-sandbox` processes stored in statics (`OnceCell`, `LazyLock`) that Rust doesn't drop on exit.
+## Spawns a signal handler thread and registers an `atexit` hook. 
+##
+## **Skip this feature** if you use nextest or per-test sandboxes.
+singleton_cleanup = []
 __stress_test = ["rand"]
+
+[[example]]
+name = "singleton_sandbox"
+required-features = ["singleton_cleanup"]

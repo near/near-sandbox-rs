@@ -1,10 +1,9 @@
+use fs4::FileExt;
+use near_account_id::AccountId;
 use std::net::SocketAddrV4;
 use std::process::Stdio;
 use std::time::Duration;
 use std::{fs::File, net::Ipv4Addr};
-
-use fs4::FileExt;
-use near_account_id::AccountId;
 use tempfile::TempDir;
 use tokio::net::TcpSocket;
 use tokio::process::Child;
@@ -15,6 +14,9 @@ use crate::error_kind::{SandboxError, SandboxRpcError, TcpError};
 use crate::runner::{init_with_version, run_neard_with_port_guards};
 use crate::sandbox::account::{AccountCreation, AccountImport};
 use crate::sandbox::patch::PatchState;
+
+#[cfg(feature = "singleton_cleanup")]
+use crate::runner::cleanup::CleanupGuard;
 
 pub mod account;
 pub mod patch;
@@ -114,7 +116,11 @@ pub struct Sandbox {
     pub rpc_port_lock: File,
     /// File lock preventing other processes from using the same network port until this sandbox is started
     pub net_port_lock: File,
+    /// Sandboxed neard process
     process: Child,
+    /// Internal sandbox cleanup guard for statically stored [`Sandbox`]
+    #[cfg(feature = "singleton_cleanup")]
+    _sandbox_guard: CleanupGuard,
 }
 
 impl Sandbox {
@@ -285,13 +291,33 @@ impl Sandbox {
                 Ok(()) => {
                     info!(target: "sandbox", "Started up sandbox at {} with pid={:?}", rpc_addr, child.id());
 
-                    return Ok(Self {
-                        home_dir,
-                        rpc_addr,
-                        rpc_port_lock,
-                        net_port_lock,
-                        process: child,
-                    });
+                    let sandbox: Self;
+                    #[cfg(feature = "singleton_cleanup")]
+                    {
+                        let sandbox_guard =
+                            CleanupGuard::new(child.id().expect("sandbox process must have PID"));
+
+                        sandbox = Self {
+                            home_dir,
+                            rpc_addr,
+                            rpc_port_lock,
+                            net_port_lock,
+                            process: child,
+                            _sandbox_guard: sandbox_guard,
+                        };
+                    }
+                    #[cfg(not(feature = "singleton_cleanup"))]
+                    {
+                        sandbox = Self {
+                            home_dir,
+                            rpc_addr,
+                            rpc_port_lock,
+                            net_port_lock,
+                            process: child,
+                        };
+                    }
+
+                    return Ok(sandbox);
                 }
                 Err(SandboxError::TimeoutError) if attempt < max_num_port_retries => {
                     warn!(
@@ -303,6 +329,11 @@ impl Sandbox {
 
                     child.kill().await.map_err(SandboxError::ShutdownError)?;
                     child.wait().await.map_err(SandboxError::ShutdownError)?;
+
+                    let data_dir = home_dir.path().join("data");
+                    if data_dir.exists() {
+                        std::fs::remove_dir_all(data_dir).map_err(SandboxError::FileError)?;
+                    }
 
                     continue;
                 }
@@ -323,7 +354,9 @@ impl Sandbox {
             }
         }
 
-        unreachable!("We return Sandbox instance or error via previous loop. loop is ensured to have at least one run");
+        unreachable!(
+            "We return Sandbox instance or error via previous loop. loop is ensured to have at least one run"
+        );
     }
 
     async fn init_home_dir_with_version(version: &str) -> Result<TempDir, SandboxError> {
@@ -514,7 +547,10 @@ impl Drop for Sandbox {
             self.process.id()
         );
 
-        self.process.start_kill().expect("failed to kill sandbox");
+        if let Err(e) = self.process.start_kill() {
+            tracing::debug!(target: "sandbox", "Kill returned error (may already be dead): {}", e);
+        }
+
         let _ = self.process.try_wait();
     }
 }

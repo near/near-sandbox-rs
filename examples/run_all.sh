@@ -7,6 +7,12 @@ for example in $(find . -name "*.rs" -type f); do
     echo "--------------------------------"
     echo "Running $example_name"
     echo "--------------------------------"
-    CI=true cargo run --release --example $example_name
+
+    if [ "$example_name" = "singleton_sandbox" ]; then
+        CI=true cargo test --release --example $example_name --features singleton_cleanup -- --nocapture
+    else
+        CI=true cargo run --release --example $example_name
+    fi
+
     echo "--------------------------------"
 done

@@ -1,7 +1,7 @@
 use near_api::{NearToken, RPCEndpoint, Signer};
 use near_sandbox::{
-    config::{DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY},
     Sandbox,
+    config::{DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY},
 };
 
 #[tokio::main]
@@ -28,10 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .send_to(DEFAULT_GENESIS_ACCOUNT.as_str().parse().unwrap())
         .near(NearToken::from_near(1))
         .with_signer(
-            Signer::new(Signer::from_secret_key(
-                DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.parse().unwrap(),
-            ))
-            .unwrap(),
+            Signer::from_secret_key(DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.parse().unwrap()).unwrap(),
         )
         .send_to(&sandbox_network)
         .await
@@ -47,7 +44,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 "periods": vec!["all-time"]
             }),
         )
-        .unwrap()
         .read_only()
         .fetch_from(&sandbox_network)
         .await
