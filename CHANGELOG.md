@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6](https://github.com/near/near-sandbox-rs/compare/v0.3.5...v0.3.6) - 2026-02-05
+
+### Fixed
+
+- proper sandbox and RocksDB cleanup ([#60](https://github.com/near/near-sandbox-rs/pull/60))
+
+### Other
+
+- upgrade actions and improve caching ([#53](https://github.com/near/near-sandbox-rs/pull/53))
+- Update nearcore version to 2.10.5 ([#56](https://github.com/near/near-sandbox-rs/pull/56))
+- add comprehensive logging documentation ([#52](https://github.com/near/near-sandbox-rs/pull/52))
+
 ## [0.3.5](https://github.com/near/near-sandbox-rs/compare/v0.3.4...v0.3.5) - 2026-01-16
 
 ### Other
