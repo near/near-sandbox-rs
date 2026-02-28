@@ -21,6 +21,9 @@ tokio = { version = "1", default-features = false, features = [
 # `libc` is already pulled by `tokio`
 libc = { version = "0.2", default-features = false }
 binary-install = "0.4"
+# Pin deflate64 < 0.1.11: that version uses `unbounded_shr` (stabilized in Rust 1.87),
+# which breaks our MSRV 1.86. Transitive dep via binary-install → zip → deflate64.
+deflate64 = ">=0.1.0, <0.1.11"
 ureq = { version = "2", default-features = false, features = ["json"] }
 fs4 = { version = "0.6", default-features = false, features = ["sync"] }
 dirs-next = { version = "2", optional = true }
