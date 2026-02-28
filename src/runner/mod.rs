@@ -176,17 +176,25 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
             .path()
             .map_err(|e| SandboxError::InstallError(e.to_string()))?;
 
-        if path.file_name() == Some(std::ffi::OsStr::new("near-sandbox")) {
+        if path.file_name() == Some(std::ffi::OsStr::new("near-sandbox"))
+            && entry.header().entry_type().is_file()
+        {
+            // Unpack to a temporary file first, then atomically rename into place.
+            // This prevents a partial file from being treated as a valid binary
+            // if extraction is interrupted (e.g. network drop, disk full).
+            let tmp_dest = dest.with_extension("tmp");
             entry
-                .unpack(&dest)
+                .unpack(&tmp_dest)
                 .map_err(|e| SandboxError::InstallError(e.to_string()))?;
 
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(&dest, std::fs::Permissions::from_mode(0o755))
+                std::fs::set_permissions(&tmp_dest, std::fs::Permissions::from_mode(0o755))
                     .map_err(SandboxError::FileError)?;
             }
+
+            std::fs::rename(&tmp_dest, &dest).map_err(SandboxError::FileError)?;
 
             return Ok(dest);
         }
