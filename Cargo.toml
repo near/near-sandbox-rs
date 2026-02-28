@@ -20,12 +20,10 @@ tokio = { version = "1", default-features = false, features = [
 ] }
 # `libc` is already pulled by `tokio`
 libc = { version = "0.2", default-features = false }
-binary-install = "0.4"
-# Pin deflate64 < 0.1.11: that version uses `unbounded_shr` (stabilized in Rust 1.87),
-# which breaks our MSRV 1.86. Transitive dep via binary-install → zip → deflate64.
-deflate64 = ">=0.1.0, <0.1.11"
-ureq = { version = "2", default-features = false, features = ["json"] }
-fs4 = { version = "0.6", default-features = false, features = ["sync"] }
+ureq = { version = "3", default-features = false, features = ["json", "rustls"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = { version = "0.4", default-features = false }
+fs4 = { version = "0.13.1", default-features = false, features = ["sync"] }
 dirs-next = { version = "2", optional = true }
 
 tempfile = { version = "3.19", default-features = false, features = [
@@ -33,10 +31,10 @@ tempfile = { version = "3.19", default-features = false, features = [
 ] }
 json-patch = { version = "4.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["std"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "std"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
-near-account-id = { version = "2", features = ["serde"] }
-near-token = { version = "0.3", features = ["serde"] }
+near-account-id = { version = "2", default-features = false, features = ["serde"] }
+near-token = { version = "0.3", default-features = false, features = ["serde"] }
 
 rand = { version = "0.8.4", optional = true }
 chrono = { version = "0.4", default-features = false, features = [
