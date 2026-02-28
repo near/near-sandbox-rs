@@ -159,6 +159,10 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
 
     // Download and extract the tar.gz archive
     let response = ureq::get(&url)
+        .config()
+        .timeout_connect(Some(std::time::Duration::from_secs(30)))
+        .timeout_recv_response(Some(std::time::Duration::from_secs(30)))
+        .build()
         .call()
         .map_err(|e| SandboxError::DownloadError(e.to_string()))?;
 
