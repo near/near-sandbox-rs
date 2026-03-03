@@ -1,4 +1,4 @@
-use fs4::FileExt;
+use fs4::fs_std::FileExt;
 use near_account_id::AccountId;
 use std::net::SocketAddrV4;
 use std::process::Stdio;
@@ -56,7 +56,7 @@ async fn acquire_unused_port_guard() -> Result<(TcpSocket, File), SandboxError> 
                 .port()
         ));
         let lockfile = File::create(lockpath).map_err(TcpError::LockingError)?;
-        if lockfile.try_lock_exclusive().is_ok() {
+        if lockfile.try_lock_exclusive().unwrap_or(false) {
             break Ok((port_guard, lockfile));
         }
     }
@@ -86,9 +86,16 @@ async fn try_acquire_specific_port_guard(port: u16) -> Result<(TcpSocket, File),
 
     let lockpath = std::env::temp_dir().join(format!("near-sandbox-port{port}.lock"));
     let lockfile = File::create(&lockpath).map_err(TcpError::LockingError)?;
-    lockfile
+    let locked = lockfile
         .try_lock_exclusive()
         .map_err(TcpError::LockingError)?;
+    if !locked {
+        return Err(TcpError::LockingError(std::io::Error::new(
+            std::io::ErrorKind::WouldBlock,
+            format!("port {port} is already locked by another process"),
+        ))
+        .into());
+    }
 
     Ok((tcp_socket, lockfile))
 }
@@ -519,17 +526,16 @@ impl Sandbox {
 
         let response = tokio::task::spawn_blocking(move || {
             ureq::post(&url)
-                .set("Content-Type", "application/json")
+                .content_type("application/json")
                 .send_json(&body_json)
         })
         .await
         .map_err(|e| {
-            // Convert JoinError to ureq::Error via io::Error
             let io_err = std::io::Error::other(e.to_string());
             ureq::Error::from(io_err)
         })??;
 
-        let body: serde_json::Value = response.into_json().map_err(ureq::Error::from)?;
+        let body: serde_json::Value = response.into_body().read_json()?;
 
         if let Some(error) = body.get("error") {
             return Err(SandboxRpcError::SandboxRpcError(error.to_string()));

@@ -1,5 +1,4 @@
-use binary_install::Cache;
-use fs4::FileExt;
+use fs4::fs_std::FileExt;
 use tokio::process::{Child, Command};
 
 use std::fs::File;
@@ -152,28 +151,62 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
         return Ok(bin_path);
     }
 
-    // Download binary into temp dir
-    let bin_name = format!("near-sandbox-{}", normalize_name(version));
-    let dl_cache = Cache::at(&download_path(version));
-    let bin_path = bin_url(version).ok_or_else(|| {
+    let url = bin_url(version).ok_or_else(|| {
         SandboxError::UnsupportedPlatformError(
-            "only linux-x86 and darwin-arm are supported".to_owned(),
+            "only linux-x86_64, linux-aarch64, and darwin-arm64 are supported".to_owned(),
         )
     })?;
-    let dl = dl_cache
-        .download(true, &bin_name, &["near-sandbox"], &bin_path)
-        .map_err(|e| SandboxError::DownloadError(e.to_string()))?
-        .ok_or_else(|| SandboxError::InstallError("Could not install near-sandbox".to_owned()))?;
 
-    let path = dl
-        .binary("near-sandbox")
-        .map_err(|e| SandboxError::InstallError(e.to_string()))?;
+    // Download and extract the tar.gz archive
+    let response = ureq::get(&url)
+        .config()
+        .timeout_connect(Some(std::time::Duration::from_secs(30)))
+        .timeout_recv_response(Some(std::time::Duration::from_secs(30)))
+        .build()
+        .call()
+        .map_err(|e| SandboxError::DownloadError(e.to_string()))?;
 
-    // Move near-sandbox binary to correct location from temp folder.
+    let decoder = flate2::read::GzDecoder::new(response.into_body().into_reader());
+    let mut archive = tar::Archive::new(decoder);
+
     let dest = download_path(version).join("near-sandbox");
-    std::fs::rename(path, &dest).map_err(SandboxError::FileError)?;
 
-    Ok(dest)
+    for entry in archive
+        .entries()
+        .map_err(|e| SandboxError::InstallError(e.to_string()))?
+    {
+        let mut entry = entry.map_err(|e| SandboxError::InstallError(e.to_string()))?;
+        let path = entry
+            .path()
+            .map_err(|e| SandboxError::InstallError(e.to_string()))?;
+
+        if path.file_name() == Some(std::ffi::OsStr::new("near-sandbox"))
+            && entry.header().entry_type().is_file()
+        {
+            // Unpack to a temporary file first, then atomically rename into place.
+            // This prevents a partial file from being treated as a valid binary
+            // if extraction is interrupted (e.g. network drop, disk full).
+            let tmp_dest = dest.with_extension("tmp");
+            entry
+                .unpack(&tmp_dest)
+                .map_err(|e| SandboxError::InstallError(e.to_string()))?;
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&tmp_dest, std::fs::Permissions::from_mode(0o755))
+                    .map_err(SandboxError::FileError)?;
+            }
+
+            std::fs::rename(&tmp_dest, &dest).map_err(SandboxError::FileError)?;
+
+            return Ok(dest);
+        }
+    }
+
+    Err(SandboxError::InstallError(
+        "near-sandbox binary not found in archive".to_owned(),
+    ))
 }
 
 fn installable(bin_path: &Path) -> Result<Option<std::fs::File>, SandboxError> {
