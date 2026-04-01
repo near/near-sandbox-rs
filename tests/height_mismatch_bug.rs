@@ -48,7 +48,6 @@ fn fast_forward(
     timeout_secs: u64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let response = ureq::post(rpc_addr)
-        .content_type("application/json")
         .config()
         .timeout_global(Some(Duration::from_secs(timeout_secs)))
         .build()
