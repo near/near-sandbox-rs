@@ -17,7 +17,6 @@ fn send_rpc_request(
     json_body: serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
     let response = ureq::post(rpc_addr)
-        .content_type("application/json")
         .config()
         .timeout_global(Some(Duration::from_secs(60)))
         .build()
