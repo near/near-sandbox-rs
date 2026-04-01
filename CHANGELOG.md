@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9](https://github.com/near/near-sandbox-rs/compare/v0.3.8...v0.3.9) - 2026-04-01
+
+### Other
+
+- add fast_forward height mismatch regression test ([#54](https://github.com/near/near-sandbox-rs/pull/54))
+- Update nearcore version to 2.11.0 ([#69](https://github.com/near/near-sandbox-rs/pull/69))
+
 ## [0.3.8](https://github.com/near/near-sandbox-rs/compare/v0.3.7...v0.3.8) - 2026-03-09
 
 ### Added
