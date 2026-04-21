@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.10](https://github.com/near/near-sandbox-rs/compare/v0.3.9...v0.3.10) - 2026-04-21
+
+### Other
+
+- Update nearcore version to 2.11.1 ([#71](https://github.com/near/near-sandbox-rs/pull/71))
+
 ## [0.3.9](https://github.com/near/near-sandbox-rs/compare/v0.3.8...v0.3.9) - 2026-04-01
 
 ### Other
