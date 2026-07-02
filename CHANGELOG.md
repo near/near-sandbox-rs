@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.12-rc.1](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12-rc.1) - 2026-07-02
+
+### Added
+
+- default sandbox to 2.13.0-rc.2 (protocol v85) ([#78](https://github.com/near/near-sandbox-rs/pull/78))
+
+### Other
+
+- use nearprotocol-ci bot token for release-plz ([#76](https://github.com/near/near-sandbox-rs/pull/76))
+
 ## [0.3.11](https://github.com/near/near-sandbox-rs/compare/v0.3.10...v0.3.11) - 2026-06-03
 
 ### Other
