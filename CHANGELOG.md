@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.12](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12) - 2026-07-02
+## [0.3.12-rc.1](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12-rc.1) - 2026-07-02
 
 ### Added
 
