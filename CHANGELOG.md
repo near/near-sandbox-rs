@@ -6,11 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.12-rc.1](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12-rc.1) - 2026-07-02
+## [0.3.12](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12) - 2026-07-09
 
 ### Added
 
-- default sandbox to 2.13.0-rc.2 (protocol v85) ([#78](https://github.com/near/near-sandbox-rs/pull/78))
+- default sandbox to nearcore 2.13.0 (protocol 86) ([#78](https://github.com/near/near-sandbox-rs/pull/78), [#80](https://github.com/near/near-sandbox-rs/pull/80))
 
 ### Other
 
