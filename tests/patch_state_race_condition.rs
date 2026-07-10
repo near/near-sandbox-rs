@@ -130,13 +130,14 @@ async fn test_patch_state_reliability() {
     for sandbox_num in 1..=NUM_SANDBOXES {
         println!("--- Sandbox {} ---", sandbox_num);
 
-        let sandbox = match Sandbox::start_sandbox().await {
-            Ok(s) => s,
-            Err(e) => {
-                println!("  Failed to start sandbox: {:?}", e);
-                continue;
-            }
-        };
+        // A sandbox that fails to start means the test never actually ran. Treat
+        // it as a hard failure instead of logging and continuing: otherwise, if
+        // every sandbox failed to start, `total` would stay 0 and the final
+        // `failure_count == 0` assertion would pass without executing a single
+        // patch/query cycle, reporting a false success.
+        let sandbox = Sandbox::start_sandbox()
+            .await
+            .expect("failed to start sandbox; cannot run patch_state race condition test");
 
         let rpc_addr = sandbox.rpc_addr.clone();
 
@@ -177,11 +178,17 @@ async fn test_patch_state_reliability() {
                         "Sandbox {}, Cycle {}: Task error: {:?}",
                         sandbox_num, cycle, e
                     );
+                    println!("  [TASK ERROR] {}", msg);
                     failure_details.push(msg);
                     failure_count += 1;
                 }
             }
         }
+
+        // Only one sandbox is kept alive at a time. Explicitly drop it (stopping
+        // the process and cleaning up its resources) before the next iteration so
+        // instances don't accumulate over the course of the run.
+        drop(sandbox);
     }
 
     let total = success_count + failure_count;
