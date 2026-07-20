@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["custom.regex"],
+  "branchPrefix": "chore/renovate-",
+  "semanticCommits": "enabled",
+  "dependencyDashboard": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track stable nearcore releases used by the default sandbox",
+      "managerFilePatterns": ["/^src\\/lib\\.rs$/"],
+      "matchStrings": [
+        "DEFAULT_NEAR_SANDBOX_VERSION: &str = \"(?<currentValue>[^\"]+)\";"
+      ],
+      "depNameTemplate": "near/nearcore",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Update the default sandbox only after stable release artifacts have had time to publish",
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["near/nearcore"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/",
+      "minimumReleaseAge": "3 hours",
+      "internalChecksFilter": "strict",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps",
+      "commitMessageTopic": "nearcore sandbox",
+      "labels": ["automated", "nearcore-update", "dependencies"],
+      "automerge": false
+    }
+  ]
+}
