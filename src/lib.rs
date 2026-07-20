@@ -25,5 +25,4 @@ pub use config::{random_account_id, random_key_pair};
 
 // The current version of the sandbox node we want to point to.
 // Should be updated to the latest release of nearcore.
-// Currently pointing to nearcore@v2.13.0 (protocol 86) released on July 9, 2026
 pub const DEFAULT_NEAR_SANDBOX_VERSION: &str = "2.13.1";
