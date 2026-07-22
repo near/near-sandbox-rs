@@ -22,6 +22,10 @@ impl<'a> AccountCreation<'a> {
         }
     }
 
+    /// Sets the account's initial total liquid balance.
+    ///
+    /// The immediately available balance may be lower because NEAR reserves part of it for
+    /// [storage staking](https://docs.near.org/protocol/storage/storage-staking).
     pub const fn initial_balance(mut self, balance: NearToken) -> Self {
         self.balance = Some(balance);
         self
