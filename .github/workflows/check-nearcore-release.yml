@@ -54,7 +54,7 @@ jobs:
         if: steps.check-changes.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
+          token: ${{ secrets.NEARPROTOCOL_CI_PR_ACCESS }}
           add-paths: |
             src/lib.rs
           commit-message: "Update nearcore version to ${{ steps.latest-version.outputs.latest_version }}"
