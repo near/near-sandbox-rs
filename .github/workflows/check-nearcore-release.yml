@@ -11,15 +11,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "18"
+          node-version: "24"
 
       - name: Run nearcore update script
         run: |
@@ -52,9 +52,9 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-changes.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.RELEASE_PLZ_GITHUB_TOKEN }}
+          token: ${{ secrets.NEARPROTOCOL_CI_PR_ACCESS }}
           add-paths: |
             src/lib.rs
           commit-message: "Update nearcore version to ${{ steps.latest-version.outputs.latest_version }}"

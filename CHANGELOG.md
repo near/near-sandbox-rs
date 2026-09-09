@@ -6,6 +6,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.16](https://github.com/near/near-sandbox-rs/compare/v0.3.15...v0.3.16) - 2026-09-04
+
+### Other
+
+- Update nearcore version to 2.13.4 ([#94](https://github.com/near/near-sandbox-rs/pull/94))
+
+## [0.3.15](https://github.com/near/near-sandbox-rs/compare/v0.3.14...v0.3.15) - 2026-08-05
+
+### Other
+
+- Update nearcore version to 2.13.3 ([#91](https://github.com/near/near-sandbox-rs/pull/91))
+- update runners and use nearprotocol-ci for PRs ([#90](https://github.com/near/near-sandbox-rs/pull/90))
+
+## [0.3.14](https://github.com/near/near-sandbox-rs/compare/v0.3.13...v0.3.14) - 2026-07-28
+
+### Other
+
+- Update nearcore version to 2.13.2 ([#88](https://github.com/near/near-sandbox-rs/pull/88))
+
+## [0.3.13](https://github.com/near/near-sandbox-rs/compare/v0.3.12...v0.3.13) - 2026-07-20
+
+### Other
+
+- update nearcore version to 2.13.1 ([#81](https://github.com/near/near-sandbox-rs/pull/81))
+
+## [0.3.12](https://github.com/near/near-sandbox-rs/compare/v0.3.11...v0.3.12) - 2026-07-09
+
+### Added
+
+- default sandbox to nearcore 2.13.0 (protocol 86) ([#78](https://github.com/near/near-sandbox-rs/pull/78), [#80](https://github.com/near/near-sandbox-rs/pull/80))
+
+### Other
+
+- use nearprotocol-ci bot token for release-plz ([#76](https://github.com/near/near-sandbox-rs/pull/76))
+
+## [0.3.11](https://github.com/near/near-sandbox-rs/compare/v0.3.10...v0.3.11) - 2026-06-03
+
+### Other
+
+- update nearcore version to 2.12.0 ([#74](https://github.com/near/near-sandbox-rs/pull/74))
+
 ## [0.3.10](https://github.com/near/near-sandbox-rs/compare/v0.3.9...v0.3.10) - 2026-04-21
 
 ### Other
