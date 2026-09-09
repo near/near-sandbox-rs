@@ -64,12 +64,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.NEARPROTOCOL_CI_PR_ACCESS }}
 
-      # release-plz doesn't expose the produced .crate path, so re-package locally.
-      # The crate tarball is reproducible from the same commit, so the attestation
-      # still binds the published artifact to this run.
-      - name: Re-package crate for attestation
-        if: steps.release-plz.outputs.releases_created == 'true'
-        run: cargo package --no-verify
       - name: Attest build provenance
         if: steps.release-plz.outputs.releases_created == 'true'
         uses: actions/attest-build-provenance@v1
