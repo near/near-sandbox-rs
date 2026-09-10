@@ -273,9 +273,6 @@ fn ensure_sandbox_bin_with_version(version: &str) -> Result<PathBuf, SandboxErro
     let mut bin_path = bin_path(version)?;
     if let Some(lockfile) = installable(&bin_path)? {
         bin_path = install_with_version(version)?;
-        unsafe {
-            std::env::set_var("NEAR_SANDBOX_BIN_PATH", bin_path.as_os_str());
-        }
         FileExt::unlock(&lockfile).map_err(SandboxError::FileError)?;
     }
 
@@ -291,4 +288,132 @@ fn log_vars() -> Vec<(String, String)> {
         vars.push(("RUST_LOG_STYLE".into(), val));
     }
     vars
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsStr;
+    use std::sync::Mutex;
+
+    // `NEAR_SANDBOX_BIN_PATH` is process-wide state. Serialize every test that
+    // reads or writes it so they don't race each other under the (multi-threaded)
+    // test runner.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Sets `NEAR_SANDBOX_BIN_PATH` for the duration of the guard and restores
+    /// whatever value (or absence of one) preceded it when dropped, including on
+    /// the panicking/failure path.
+    struct EnvVarGuard {
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(value: &OsStr) -> Self {
+            let previous = std::env::var("NEAR_SANDBOX_BIN_PATH").ok();
+            unsafe {
+                std::env::set_var("NEAR_SANDBOX_BIN_PATH", value);
+            }
+            Self { previous }
+        }
+
+        fn unset() -> Self {
+            let previous = std::env::var("NEAR_SANDBOX_BIN_PATH").ok();
+            unsafe {
+                std::env::remove_var("NEAR_SANDBOX_BIN_PATH");
+            }
+            Self { previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.previous {
+                    Some(val) => std::env::set_var("NEAR_SANDBOX_BIN_PATH", val),
+                    None => std::env::remove_var("NEAR_SANDBOX_BIN_PATH"),
+                }
+            }
+        }
+    }
+
+    /// `download_path` creates the version directory as a side effect of
+    /// resolving a path, so resolving a made-up version leaves an empty
+    /// directory behind — under `global_install` that is the real `~/.near`.
+    /// Remove it again, but only while it is still empty, so a directory that
+    /// holds an actual downloaded binary is never touched.
+    struct VersionDirGuard {
+        dir: PathBuf,
+    }
+
+    impl VersionDirGuard {
+        fn of(bin_path: &Path) -> Self {
+            Self {
+                dir: bin_path
+                    .parent()
+                    .expect("resolved binary path has a parent directory")
+                    .to_path_buf(),
+            }
+        }
+    }
+
+    impl Drop for VersionDirGuard {
+        fn drop(&mut self) {
+            if let Ok(mut entries) = std::fs::read_dir(&self.dir) {
+                if entries.next().is_none() {
+                    let _ = std::fs::remove_dir(&self.dir);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bin_path_resolves_independently_per_version_without_override() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = EnvVarGuard::unset();
+
+        let path_a = bin_path("version-a").expect("resolves for version a");
+        let path_b = bin_path("version-b").expect("resolves for version b");
+        let _dir_a = VersionDirGuard::of(&path_a);
+        let _dir_b = VersionDirGuard::of(&path_b);
+
+        assert_ne!(path_a, path_b);
+        assert_eq!(path_a.file_name().unwrap(), "near-sandbox");
+        assert_eq!(path_b.file_name().unwrap(), "near-sandbox");
+        assert!(path_a.to_string_lossy().contains("version-a"));
+        assert!(path_b.to_string_lossy().contains("version-b"));
+    }
+
+    #[test]
+    fn bin_path_returns_override_when_set_to_existing_file() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let tmp = tempfile::NamedTempFile::new().expect("create temp file");
+        let _guard = EnvVarGuard::set(tmp.path().as_os_str());
+
+        let resolved = bin_path("any-version").expect("resolves via override");
+        assert_eq!(resolved, tmp.path());
+    }
+
+    #[test]
+    fn bin_path_errors_when_override_points_to_missing_file() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let missing = std::env::temp_dir().join("near-sandbox-rs-test-does-not-exist");
+        let _guard = EnvVarGuard::set(missing.as_os_str());
+
+        let result = bin_path("any-version");
+        assert!(matches!(result, Err(SandboxError::BinaryError(_))));
+    }
+
+    #[test]
+    fn check_for_version_returns_override_when_set() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let tmp = tempfile::NamedTempFile::new().expect("create temp file");
+        let _guard = EnvVarGuard::set(tmp.path().as_os_str());
+
+        let resolved = check_for_version("any-version").expect("resolves via override");
+        assert_eq!(resolved, Some(tmp.path().to_path_buf()));
+    }
 }
