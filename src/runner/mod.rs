@@ -317,8 +317,11 @@ fn log_vars() -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command as ProcessCommand;
     use std::sync::{Arc, Mutex};
     use std::thread;
+
+    const PRODUCTION_INSTALL_CHILD: &str = "NEAR_SANDBOX_PRODUCTION_INSTALL_CHILD";
 
     /// `download_path` creates the version directory as a side effect of
     /// resolving a path, so resolving a made-up version leaves an empty
@@ -347,6 +350,24 @@ mod tests {
                     let _ = std::fs::remove_dir(&self.dir);
                 }
             }
+        }
+    }
+
+    struct LockFileGuard {
+        path: PathBuf,
+    }
+
+    impl LockFileGuard {
+        fn of(bin_path: &Path) -> Self {
+            let mut path = bin_path.to_path_buf();
+            path.set_extension("lock");
+            Self { path }
+        }
+    }
+
+    impl Drop for LockFileGuard {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.path);
         }
     }
 
@@ -418,6 +439,10 @@ mod tests {
             .iter()
             .map(|path| VersionDirGuard::of(path))
             .collect::<Vec<_>>();
+        let _lock_files = expected_bin_paths
+            .iter()
+            .map(|path| LockFileGuard::of(path))
+            .collect::<Vec<_>>();
 
         let installed_path_a = ensure_sandbox_bin_with_version_with_override(
             &versions[0],
@@ -448,10 +473,6 @@ mod tests {
             versions[1]
         );
         assert_eq!(*installed_versions.lock().unwrap(), versions);
-
-        for path in expected_bin_paths {
-            let _ = std::fs::remove_file(path.with_extension("lock"));
-        }
     }
 
     #[test]
@@ -485,6 +506,10 @@ mod tests {
             .iter()
             .map(|path| VersionDirGuard::of(path))
             .collect::<Vec<_>>();
+        let _lock_files = expected_bin_paths
+            .iter()
+            .map(|path| LockFileGuard::of(path))
+            .collect::<Vec<_>>();
 
         let handles = versions.iter().cloned().map(|version| {
             let output_dir = output_dir.path().to_path_buf();
@@ -515,9 +540,76 @@ mod tests {
         let mut expected_versions = versions.to_vec();
         expected_versions.sort();
         assert_eq!(recorded_versions, expected_versions);
+    }
 
-        for path in expected_bin_paths {
-            let _ = std::fs::remove_file(path.with_extension("lock"));
+    #[test]
+    fn production_wrapper_preserves_env_in_child_process() {
+        let output = ProcessCommand::new(std::env::current_exe().expect("locate test binary"))
+            .arg("--exact")
+            .arg("runner::tests::production_wrapper_installs_without_env_mutation_child")
+            .arg("--nocapture")
+            .env_remove("NEAR_SANDBOX_BIN_PATH")
+            .env(PRODUCTION_INSTALL_CHILD, "1")
+            .output()
+            .expect("run production wrapper child test");
+
+        assert!(
+            output.status.success(),
+            "child test failed\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
+    fn production_wrapper_installs_without_env_mutation_child() {
+        if std::env::var_os(PRODUCTION_INSTALL_CHILD).as_deref() != Some(std::ffi::OsStr::new("1"))
+        {
+            return;
         }
+
+        assert!(std::env::var_os("NEAR_SANDBOX_BIN_PATH").is_none());
+
+        let output_dir = tempfile::tempdir().expect("create installer output directory");
+        let installed_versions = Arc::new(Mutex::new(Vec::new()));
+        let versions = [
+            format!("test-production-a-{}", std::process::id()),
+            format!("test-production-b-{}", std::process::id()),
+        ];
+        let expected_bin_paths = versions
+            .iter()
+            .map(|version| bin_path_with_override(version, None).expect("resolve version path"))
+            .collect::<Vec<_>>();
+        let _version_dirs = expected_bin_paths
+            .iter()
+            .map(|path| VersionDirGuard::of(path))
+            .collect::<Vec<_>>();
+        let _lock_files = expected_bin_paths
+            .iter()
+            .map(|path| LockFileGuard::of(path))
+            .collect::<Vec<_>>();
+
+        let installed_path_a = ensure_sandbox_bin_with_version(
+            &versions[0],
+            fake_installer(
+                output_dir.path().to_path_buf(),
+                Arc::clone(&installed_versions),
+            ),
+        )
+        .expect("install first missing version");
+        assert!(std::env::var_os("NEAR_SANDBOX_BIN_PATH").is_none());
+
+        let installed_path_b = ensure_sandbox_bin_with_version(
+            &versions[1],
+            fake_installer(
+                output_dir.path().to_path_buf(),
+                Arc::clone(&installed_versions),
+            ),
+        )
+        .expect("install second missing version");
+        assert!(std::env::var_os("NEAR_SANDBOX_BIN_PATH").is_none());
+
+        assert_ne!(installed_path_a, installed_path_b);
+        assert_eq!(*installed_versions.lock().unwrap(), versions);
     }
 }
