@@ -19,7 +19,7 @@ pub fn rpc_socket(port: u16) -> String {
 
 /// Initialize a sandbox node with the provided version and home directory.
 pub fn init_with_version(home_dir: impl AsRef<Path>, version: &str) -> Result<Child, SandboxError> {
-    let bin_path = ensure_sandbox_bin_with_version(version)?;
+    let bin_path = ensure_sandbox_bin_with_version(version, install_with_version)?;
     let home_dir = home_dir.as_ref().to_str().unwrap();
     Command::new(&bin_path)
         .envs(log_vars())
@@ -42,7 +42,7 @@ pub fn run_neard_with_port_guards(
     net_listener_guard: tokio::net::TcpSocket,
     stderr: Option<Stdio>,
 ) -> Result<Child, SandboxError> {
-    let bin_path = ensure_sandbox_bin_with_version(version)?;
+    let bin_path = ensure_sandbox_bin_with_version(version, install_with_version)?;
 
     let rpc_addr = rpc_socket(
         rpc_listener_guard
@@ -109,7 +109,7 @@ const fn platform() -> Option<&'static str> {
 /// Installs sandbox node with the default version. This is a version that is usually stable
 /// and has landed into mainnet to reflect the latest stable features and fixes.
 pub fn install() -> Result<PathBuf, SandboxError> {
-    ensure_sandbox_bin_with_version(crate::DEFAULT_NEAR_SANDBOX_VERSION)
+    ensure_sandbox_bin_with_version(crate::DEFAULT_NEAR_SANDBOX_VERSION, install_with_version)
 }
 
 // if the `SANDBOX_ARTIFACT_URL` env var is set, we short-circuit and use that.
@@ -269,10 +269,13 @@ fn bin_path(version: &str) -> Result<PathBuf, SandboxError> {
     Ok(buf)
 }
 
-fn ensure_sandbox_bin_with_version(version: &str) -> Result<PathBuf, SandboxError> {
+fn ensure_sandbox_bin_with_version<F>(version: &str, installer: F) -> Result<PathBuf, SandboxError>
+where
+    F: FnOnce(&str) -> Result<PathBuf, SandboxError>,
+{
     let mut bin_path = bin_path(version)?;
     if let Some(lockfile) = installable(&bin_path)? {
-        bin_path = install_with_version(version)?;
+        bin_path = installer(version)?;
         FileExt::unlock(&lockfile).map_err(SandboxError::FileError)?;
     }
 
@@ -294,7 +297,8 @@ fn log_vars() -> Vec<(String, String)> {
 mod tests {
     use super::*;
     use std::ffi::OsStr;
-    use std::sync::Mutex;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
 
     // `NEAR_SANDBOX_BIN_PATH` is process-wide state. Serialize every test that
     // reads or writes it so they don't race each other under the (multi-threaded)
@@ -415,5 +419,110 @@ mod tests {
 
         let resolved = check_for_version("any-version").expect("resolves via override");
         assert_eq!(resolved, Some(tmp.path().to_path_buf()));
+    }
+
+    #[test]
+    fn ensure_installs_missing_version_without_mutating_override() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _env_guard = EnvVarGuard::unset();
+        let output_dir = tempfile::tempdir().expect("create installer output directory");
+        let installed_versions = Arc::new(Mutex::new(Vec::new()));
+        let version = format!("test-installer-{}", std::process::id());
+        let expected_bin_path = bin_path(&version).expect("resolve version path");
+        let _version_dir = VersionDirGuard::of(&expected_bin_path);
+
+        let installed_path = ensure_sandbox_bin_with_version(&version, {
+            let output_dir = output_dir.path().to_path_buf();
+            let installed_versions = Arc::clone(&installed_versions);
+            move |version| {
+                installed_versions.lock().unwrap().push(version.to_owned());
+                let path = output_dir.join(format!("near-sandbox-{version}"));
+                std::fs::write(&path, version).map_err(SandboxError::FileError)?;
+                Ok(path)
+            }
+        })
+        .expect("install missing version");
+
+        assert_eq!(
+            installed_path,
+            output_dir.path().join(format!("near-sandbox-{version}"))
+        );
+        assert_eq!(std::fs::read_to_string(&installed_path).unwrap(), version);
+        assert_eq!(*installed_versions.lock().unwrap(), vec![version]);
+        assert!(std::env::var_os("NEAR_SANDBOX_BIN_PATH").is_none());
+
+        let _ = std::fs::remove_file(expected_bin_path.with_extension("lock"));
+    }
+
+    #[test]
+    fn ensure_keeps_explicit_override() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let tmp = tempfile::NamedTempFile::new().expect("create override file");
+        let _env_guard = EnvVarGuard::set(tmp.path().as_os_str());
+
+        let resolved = ensure_sandbox_bin_with_version("any-version", |_| {
+            Err(SandboxError::InstallError(
+                "installer should not be called for an override".to_owned(),
+            ))
+        })
+        .expect("resolve explicit override");
+
+        assert_eq!(resolved, tmp.path());
+    }
+
+    #[test]
+    fn ensure_installs_concurrent_versions_independently() {
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _env_guard = EnvVarGuard::unset();
+        let output_dir = tempfile::tempdir().expect("create installer output directory");
+        let installed_versions = Arc::new(Mutex::new(Vec::new()));
+        let versions = [
+            format!("test-concurrent-a-{}", std::process::id()),
+            format!("test-concurrent-b-{}", std::process::id()),
+        ];
+        let expected_bin_paths = versions
+            .iter()
+            .map(|version| bin_path(version).expect("resolve version path"))
+            .collect::<Vec<_>>();
+        let _version_dirs = expected_bin_paths
+            .iter()
+            .map(|path| VersionDirGuard::of(path))
+            .collect::<Vec<_>>();
+
+        let handles = versions.iter().cloned().map(|version| {
+            let output_dir = output_dir.path().to_path_buf();
+            let installed_versions = Arc::clone(&installed_versions);
+            thread::spawn(move || {
+                ensure_sandbox_bin_with_version(&version, move |version| {
+                    installed_versions.lock().unwrap().push(version.to_owned());
+                    let path = output_dir.join(format!("near-sandbox-{version}"));
+                    std::fs::write(&path, version).map_err(SandboxError::FileError)?;
+                    Ok(path)
+                })
+                .expect("install missing version")
+            })
+        });
+        let installed_paths = handles
+            .map(|handle| handle.join().expect("installer thread completes"))
+            .collect::<Vec<_>>();
+
+        assert_ne!(installed_paths[0], installed_paths[1]);
+        assert_eq!(
+            installed_paths
+                .iter()
+                .map(|path| std::fs::read_to_string(path).unwrap())
+                .collect::<Vec<_>>(),
+            versions
+        );
+        let mut recorded_versions = installed_versions.lock().unwrap().clone();
+        recorded_versions.sort();
+        let mut expected_versions = versions.to_vec();
+        expected_versions.sort();
+        assert_eq!(recorded_versions, expected_versions);
+        assert!(std::env::var_os("NEAR_SANDBOX_BIN_PATH").is_none());
+
+        for path in expected_bin_paths {
+            let _ = std::fs::remove_file(path.with_extension("lock"));
+        }
     }
 }
