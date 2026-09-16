@@ -25,10 +25,10 @@ jobs:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
+      # NOTE: dev-dependencies (near-api -> url -> icu -> yoke-derive 0.8.3) no longer
+      # build on 1.86; the library itself still honors rust-version = 1.86.0.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
@@ -58,10 +58,8 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -87,10 +85,8 @@ jobs:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -116,10 +112,8 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
