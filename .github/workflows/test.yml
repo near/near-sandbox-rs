@@ -25,10 +25,10 @@ jobs:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
+      # NOTE: dev-dependencies (near-api -> url -> icu -> yoke-derive 0.8.3) no longer
+      # build on 1.86; the library itself still honors rust-version = 1.86.0.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
@@ -44,6 +44,26 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --all --check
 
+  msrv:
+    name: MSRV check (library only)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: linux-msrv
+          cache-on-failure: true
+          cache-all-crates: true
+
+      # Dev-dependencies are excluded on purpose: they are not covered by rust-version.
+      - name: Check library on rust-version
+        run: cargo check --lib --all-features
+
   test-platforms:
     name: Test code on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -58,10 +78,8 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -87,10 +105,8 @@ jobs:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -107,7 +123,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04, macos-latest]
-    needs: [check, test-platforms, check-doc]
+    needs: [check, msrv, test-platforms, check-doc]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -116,10 +132,8 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
-      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
-      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.86.0
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -135,7 +149,7 @@ jobs:
   release-plz:
     name: Release-plz
     runs-on: ubuntu-24.04
-    needs: [check, check-doc, test-platforms, check-examples]
+    needs: [check, msrv, check-doc, test-platforms, check-examples]
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository

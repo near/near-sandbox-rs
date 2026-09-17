@@ -33,7 +33,7 @@ json-patch = { version = "4.0", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["std"] }
 serde = { version = "1.0", default-features = false, features = ["derive", "std"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
-near-account-id = { version = "2", default-features = false, features = ["serde"] }
+near-account-id = { version = "3", default-features = false, features = ["serde"] }
 near-token = { version = "0.3", default-features = false, features = ["serde"] }
 
 rand = { version = "0.8.4", optional = true }

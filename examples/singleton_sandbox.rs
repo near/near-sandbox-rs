@@ -56,7 +56,7 @@ pub struct SharedEnv {
     sandbox: Arc<near_sandbox::Sandbox>,
     network: near_api::NetworkConfig,
     /// Root account that creates subaccount for tests
-    root_acc: near_account_id::AccountId,
+    root_acc: near_api::AccountId,
     /// Root signer for account that creates subaccounts for tests
     root_signer: Arc<near_api::Signer>,
 }
@@ -74,8 +74,10 @@ impl SharedEnv {
         // Use default "sandbox" account as root for creating subaccounts
         // You can also define your own TLA and use `near_api::signer::generate_secret_key()` for
         // secret key generation
-        let root_acc: near_account_id::AccountId =
-            near_sandbox::config::DEFAULT_GENESIS_ACCOUNT.to_owned();
+        let root_acc: near_api::AccountId = near_sandbox::config::DEFAULT_GENESIS_ACCOUNT
+            .as_str()
+            .parse()
+            .expect("Valid genesis account id");
         let root_signer = near_api::Signer::from_secret_key(
             near_sandbox::config::DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY
                 .parse()
@@ -106,9 +108,9 @@ impl SharedEnv {
     pub async fn generate_account(
         &self,
         initial_balance: near_token::NearToken,
-    ) -> (near_account_id::AccountId, Arc<near_api::Signer>) {
+    ) -> (near_api::AccountId, Arc<near_api::Signer>) {
         let counter = ACCOUNT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let account_id: near_account_id::AccountId =
+        let account_id: near_api::AccountId =
             format!("{}.{}", counter, self.root_acc).parse().unwrap();
 
         let secret_key =
