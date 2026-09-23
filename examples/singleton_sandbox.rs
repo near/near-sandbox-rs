@@ -74,6 +74,7 @@ impl SharedEnv {
         // Use default "sandbox" account as root for creating subaccounts
         // You can also define your own TLA and use `near_api::signer::generate_secret_key()` for
         // secret key generation
+        // near-api 0.8 still uses near-account-id 2, so convert through a string
         let root_acc: near_api::AccountId = near_sandbox::config::DEFAULT_GENESIS_ACCOUNT
             .as_str()
             .parse()
