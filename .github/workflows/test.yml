@@ -38,6 +38,10 @@ jobs:
           cache-on-failure: true
           cache-all-crates: true
 
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
+
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D clippy::all
 
@@ -69,6 +73,10 @@ jobs:
           cache-on-failure: true
           cache-all-crates: true
 
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
+
       - name: Run Tests
         run: cargo test --all-features -- --nocapture
 
@@ -98,6 +106,10 @@ jobs:
           cache-on-failure: true
           cache-all-crates: true
 
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
+
       - name: Run cargo doc
         run: RUSTDOCFLAGS="-D warnings" cargo doc --all-features --document-private-items
 
@@ -126,6 +138,10 @@ jobs:
           shared-key: ${{ runner.os }}-examples
           cache-on-failure: true
           cache-all-crates: true
+
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
 
       - name: Run examples
         run: |
