@@ -62,14 +62,20 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.86.0
 
       - uses: swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-test
           cache-on-failure: true
           cache-all-crates: true
+
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
 
       - name: Run Tests
         run: cargo test --all-features -- --nocapture
@@ -89,14 +95,20 @@ jobs:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.86.0
 
       - uses: swatinem/rust-cache@v2
         with:
           shared-key: linux-doc
           cache-on-failure: true
           cache-all-crates: true
+
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
 
       - name: Run cargo doc
         run: RUSTDOCFLAGS="-D warnings" cargo doc --all-features --document-private-items
@@ -116,14 +128,20 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libsystemd-dev
 
+      # NOTE: using 1.86.0 toolchain to ensure it compiles with contracts.
+      # will be changed to stable once contract compilation will be fixed.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.86.0
 
       - uses: swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-examples
           cache-on-failure: true
           cache-all-crates: true
+
+      # yoke-derive 0.8.3 (a dev-dependency via near-api) needs rustc 1.87+, so pin 0.8.2.
+      - name: Pin yoke-derive for 1.86
+        run: cargo update -p yoke-derive --precise 0.8.2
 
       - name: Run examples
         run: |
