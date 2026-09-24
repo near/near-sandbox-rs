@@ -1,6 +1,7 @@
 use fs4::fs_std::FileExt;
 use tokio::process::{Child, Command};
 
+use std::error::Error;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -171,14 +172,9 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
 
     let dest = download_path(version).join("near-sandbox");
 
-    for entry in archive
-        .entries()
-        .map_err(|e| SandboxError::InstallError(e.to_string()))?
-    {
-        let mut entry = entry.map_err(|e| SandboxError::InstallError(e.to_string()))?;
-        let path = entry
-            .path()
-            .map_err(|e| SandboxError::InstallError(e.to_string()))?;
+    for entry in archive.entries().map_err(install_error)? {
+        let mut entry = entry.map_err(install_error)?;
+        let path = entry.path().map_err(install_error)?;
 
         if path.file_name() == Some(std::ffi::OsStr::new("near-sandbox"))
             && entry.header().entry_type().is_file()
@@ -187,9 +183,7 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
             // This prevents a partial file from being treated as a valid binary
             // if extraction is interrupted (e.g. network drop, disk full).
             let tmp_dest = dest.with_extension("tmp");
-            entry
-                .unpack(&tmp_dest)
-                .map_err(|e| SandboxError::InstallError(e.to_string()))?;
+            entry.unpack(&tmp_dest).map_err(install_error)?;
 
             #[cfg(unix)]
             {
@@ -207,6 +201,16 @@ fn install_with_version(version: &str) -> Result<PathBuf, SandboxError> {
     Err(SandboxError::InstallError(
         "near-sandbox binary not found in archive".to_owned(),
     ))
+}
+
+/// Wraps an I/O error into [`SandboxError::InstallError`] together with its `source()` chain.
+/// `tar` errors only display *what* failed (`failed to unpack ...`); the actual cause
+/// (e.g. a truncated download or a full disk) is buried in the source.
+fn install_error(err: std::io::Error) -> SandboxError {
+    let causes: String = std::iter::successors(err.source(), |&e| e.source())
+        .map(|e| format!(": {e}"))
+        .collect();
+    SandboxError::InstallError(format!("{err}{causes}"))
 }
 
 fn installable(bin_path: &Path) -> Result<Option<std::fs::File>, SandboxError> {
@@ -291,4 +295,23 @@ fn log_vars() -> Vec<(String, String)> {
         vars.push(("RUST_LOG_STYLE".into(), val));
     }
     vars
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, thiserror::Error)]
+    #[error("failed to unpack")]
+    struct Wrapped(#[source] std::io::Error);
+
+    #[test]
+    fn install_error_includes_source_chain() {
+        let err =
+            std::io::Error::other(Wrapped(std::io::Error::other("incomplete deflate stream")));
+        assert_eq!(
+            install_error(err).to_string(),
+            "Install error: failed to unpack: incomplete deflate stream"
+        );
+    }
 }
