@@ -117,8 +117,8 @@ impl SharedEnv {
         let account_signer =
             near_api::Signer::from_secret_key(secret_key.clone()).expect("Failed to create signer");
 
-        near_api::Account::create_account(account_id.clone())
-            .fund_myself(self.root_acc.clone(), initial_balance)
+        near_api::Account::create_account(api_account_id(&account_id))
+            .fund_myself(api_account_id(&self.root_acc), initial_balance)
             .with_public_key(secret_key.public_key())
             .with_signer(self.root_signer.clone())
             .send_to(self.network())
@@ -128,6 +128,11 @@ impl SharedEnv {
 
         (account_id, account_signer)
     }
+}
+
+/// near-api 0.8 still uses near-account-id 2, so convert through a string.
+fn api_account_id(account_id: &near_account_id::AccountId) -> near_api::AccountId {
+    account_id.as_str().parse().expect("Valid account id")
 }
 
 /// Get or initialize the shared sandbox environment.
@@ -163,7 +168,7 @@ mod tests {
             env.sandbox.rpc_addr
         );
 
-        let account = near_api::Account(account_id)
+        let account = near_api::Account(api_account_id(&account_id))
             .view()
             .fetch_from(env.network())
             .await
@@ -183,7 +188,7 @@ mod tests {
             env.sandbox.rpc_addr
         );
 
-        let account = near_api::Account(account_id)
+        let account = near_api::Account(api_account_id(&account_id))
             .view()
             .fetch_from(env.network())
             .await
@@ -203,7 +208,7 @@ mod tests {
             new_env.sandbox.rpc_addr
         );
 
-        let account = near_api::Account(account_id)
+        let account = near_api::Account(api_account_id(&account_id))
             .view()
             .fetch_from(new_env.network())
             .await

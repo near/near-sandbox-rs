@@ -30,6 +30,7 @@
       "semanticCommitScope": "deps",
       "commitMessageTopic": "nearcore sandbox",
       "labels": ["automated", "nearcore-update", "dependencies"],
+      "rollbackPrs": false,
       "automerge": false
     }
   ]

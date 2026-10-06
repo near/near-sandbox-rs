@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0-rc.1](https://github.com/near/near-sandbox-rs/compare/v0.3.16...v0.4.0-rc.1) - 2026-09-23
+
+### Added
+
+- default the sandbox to nearcore 2.14.0-rc.2 ([#97](https://github.com/near/near-sandbox-rs/pull/97))
+
+## [0.3.16](https://github.com/near/near-sandbox-rs/compare/v0.3.15...v0.3.16) - 2026-09-04
+
+### Other
+
+- Update nearcore version to 2.13.4 ([#94](https://github.com/near/near-sandbox-rs/pull/94))
+
+## [0.3.15](https://github.com/near/near-sandbox-rs/compare/v0.3.14...v0.3.15) - 2026-08-05
+
+### Other
+
+- Update nearcore version to 2.13.3 ([#91](https://github.com/near/near-sandbox-rs/pull/91))
+- update runners and use nearprotocol-ci for PRs ([#90](https://github.com/near/near-sandbox-rs/pull/90))
+
+## [0.3.14](https://github.com/near/near-sandbox-rs/compare/v0.3.13...v0.3.14) - 2026-07-28
+
+### Other
+
+- Update nearcore version to 2.13.2 ([#88](https://github.com/near/near-sandbox-rs/pull/88))
+
 ## [0.3.13](https://github.com/near/near-sandbox-rs/compare/v0.3.12...v0.3.13) - 2026-07-20
 
 ### Other
