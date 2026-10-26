@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/near/near-sandbox-rs/compare/v0.3.16...v0.4.0) - 2026-10-26
+
+### Fixed
+
+- stop mutating NEAR_SANDBOX_BIN_PATH after downloads ([#96](https://github.com/near/near-sandbox-rs/pull/96))
+
+### Other
+
+- Update nearcore version to 2.14.0 ([#105](https://github.com/near/near-sandbox-rs/pull/105))
+- *(ci)* remove yoke_derive pin - it got updated ([#106](https://github.com/near/near-sandbox-rs/pull/106))
+
 ## [0.4.0-rc.2](https://github.com/near/near-sandbox-rs/compare/v0.4.0-rc.1...v0.4.0-rc.2) - 2026-10-14
 
 ### Added
