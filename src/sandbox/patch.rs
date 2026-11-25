@@ -280,7 +280,7 @@ impl<'a> PatchState<'a> {
                 .ok_or(SandboxRpcError::UnexpectedResponse)?
                 .as_object_mut()
             {
-                obj["amount"] = serde_json::json!(balance.to_string());
+                obj["amount"] = serde_json::json!(balance);
             }
 
             records.insert(
@@ -614,5 +614,28 @@ mod tests {
         assert_eq!(stats["id"], 0);
 
         println!("{:#?}", stats);
+    }
+
+    #[tokio::test]
+    async fn test_patch_initial_balance_without_fetching_account() {
+        let sandbox = Sandbox::start_sandbox().await.unwrap();
+        let sandbox_network =
+            NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse().unwrap());
+        let account_id: AccountId = "sandbox".parse().unwrap();
+
+        sandbox
+            .patch_state(account_id.as_str().parse().unwrap())
+            .initial_balance(NearToken::from_near(1_000_000))
+            .send()
+            .await
+            .unwrap();
+
+        let account = Account(account_id)
+            .view()
+            .fetch_from(&sandbox_network)
+            .await
+            .unwrap()
+            .data;
+        assert_eq!(NearToken::from_near(1_000_000), account.amount);
     }
 }
